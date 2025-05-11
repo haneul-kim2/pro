@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtualenv
+venv/
+.venv/
+ENV/
+env/
+ENV.bak/
+env.bak/
+
+# SQLite
+*.sqlite3
+*.db
+
+# IDE / Editor specific
+.vscode/
+.idea/
+*.DS_Store
