@@ -50,23 +50,35 @@
         <h1>메이플스토리 수익 기록 웹</h1>
     </header>
 
-     <!-- 네비게이션 바 - '타임' 텍스트 제거 -->
-    <nav>
-        <ul>
-            <li><a href="{{ url_for('read_home') }}">홈</a></li>
-            <li><a href="{{ url_for('meso_sales_page') }}">메소 판매</a></li>
-            <li><a href="{{ url_for('hunting_times_page') }}">사냥</a></li> <!-- ' 타임' 제거 -->
-            <li><a href="{{ url_for('jjul_times_page') }}">쩔</a></li>   <!-- ' 타임' 제거 -->
-            <li class="dropdown">
-                <a href="javascript:void(0)" class="dropbtn active">통계</a> <!-- active -->
-                <div class="dropdown-content">
-                    <a href="{{ url_for('statistics_daily_page') }}" class="active">일별 요약</a> <!-- active -->
-                    <a href="{{ url_for('statistics_map_page') }}">맵별 요약</a>
-                    <a href="{{ url_for('statistics_weekday_page') }}">요일별 요약</a>
-                </div>
-            </li>
-        </ul>
-    </nav>
+<!-- 네비게이션 바 - 순서 및 이름 변경 -->
+<nav>
+    <ul>
+        <!-- 1. 홈 -->
+        <li><a href="{{ url_for('read_home') }}">홈</a></li> <!-- 'active' 클래스는 페이지별로 다를 수 있으니 일단 빼고 복사하거나, 나중에 각 페이지에 맞게 수정 -->
+
+        <!-- 2. 사냥 -->
+        <li><a href="{{ url_for('hunting_times_page') }}">사냥</a></li>
+
+        <!-- 3. 쩔 -->
+        <li><a href="{{ url_for('jjul_times_page') }}">쩔</a></li>
+
+        <!-- 4. 경험치 통계 (신규 추가) -->
+        <li><a href="{{ url_for('read_experience_statistics_page') }}">경험치 통계</a></li>
+
+        <!-- 5. 통계 (드롭다운) -->
+        <li class="dropdown">
+            <a href="javascript:void(0)" class="dropbtn">통계</a>
+            <div class="dropdown-content">
+                <a href="{{ url_for('statistics_daily_page') }}">일별 요약</a>
+                <a href="{{ url_for('statistics_map_page') }}">맵별 요약</a>
+                <a href="{{ url_for('statistics_weekday_page') }}">요일별 요약</a>
+            </div>
+        </li>
+
+        <!-- 6. 메소 판매 기록 (이름 변경) -->
+        <li><a href="{{ url_for('meso_sales_page') }}">메소 판매 기록</a></li>
+    </ul>
+</nav>
     <!-- 네비게이션 바 끝 -->
 
     <main class="container">

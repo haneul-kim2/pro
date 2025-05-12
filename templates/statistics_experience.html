@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>경험치 통계</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}"> <!-- CSS 경로 확인 -->
+    <style>
+        /* 페이지별 추가 스타일 필요 시 여기에 작성 */
+        .stat-item { margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 5px; background-color: #f9f9f9; }
+        .stat-item h3 { margin-top: 0; color: #333; }
+        #dailyExpList ul { list-style-type: none; padding: 0; }
+        #dailyExpList li { margin-bottom: 5px; font-size: 0.9em; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>메이플스토리 수익 기록 웹</h1> <!-- 헤더 제목 확인 -->
+        <nav>
+            <!-- 네비게이션 바 (현재 main.py 및 다른 html과 동일한 코드) -->
+            <ul>
+                <li><a href="{{ url_for('read_home') }}">홈</a></li>
+                <li><a href="{{ url_for('hunting_times_page') }}">사냥</a></li>
+                <li><a href="{{ url_for('jjul_times_page') }}">쩔</a></li>
+                <li><a href="{{ url_for('read_experience_statistics_page') }}" class="active">경험치 통계</a></li> <!-- 현재 페이지 active -->
+                <li class="dropdown">
+                    <a href="javascript:void(0)" class="dropbtn">통계</a>
+                    <div class="dropdown-content">
+                        <a href="{{ url_for('statistics_daily_page') }}">일별 요약</a>
+                        <a href="{{ url_for('statistics_map_page') }}">맵별 요약</a>
+                        <a href="{{ url_for('statistics_weekday_page') }}">요일별 요약</a>
+                    </div>
+                </li>
+                <li><a href="{{ url_for('meso_sales_page') }}">메소 판매 기록</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main class="container"> <!-- main 태그에 class="container" 추가 (다른 페이지와 통일) -->
+        <h2>경험치 통계</h2>
+
+        <div id="averageExpPerHour" class="stat-item">
+            <h3>시간당 평균 경험치</h3>
+            <p>로딩 중...</p>
+        </div>
+
+        <div id="dailyExpTotal" class="stat-item">
+            <h3>일별 총 획득 경험치</h3>
+            <div id="dailyExpList">
+                <p>로딩 중...</p>
+            </div>
+        </div>
+
+    </main>
+
+    <footer>
+        <p>© 2025 의문의돌맹이. All rights reserved.</p> <!-- 푸터 내용 확인 -->
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 시간당 평균 경험치 가져오기
+            fetch('/api/statistics/experience/v2/average-per-hour') // API 경로 확인
+                .then(response => {
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    return response.json();
+                })
+                .then(data => {
+                    const avgExpElement = document.querySelector('#averageExpPerHour p');
+                    const avgExp = data.시간당평균경험치; // 백엔드 응답 필드명 확인
+                    if (avgExp !== null && avgExp !== undefined) {
+                        const formattedAvgExp = Math.round(avgExp).toLocaleString('ko-KR'); // 소수점 버리고 콤마 추가
+                        avgExpElement.textContent = `${formattedAvgExp} EXP / 시간`;
+                    } else {
+                         avgExpElement.textContent = '데이터 없음';
+                    }
+                })
+                .catch(error => {
+                    console.error('시간당 평균 경험치 로딩 오류:', error);
+                    const avgExpElement = document.querySelector('#averageExpPerHour p');
+                    avgExpElement.textContent = '데이터 로딩 실패';
+                    avgExpElement.style.color = 'red';
+                });
+
+            // 일별 총 경험치 가져오기
+            fetch('/api/statistics/experience/v2/daily-total') // API 경로 확인
+                .then(response => {
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    return response.json();
+                 })
+                .then(data => {
+                    const dailyExpListElement = document.getElementById('dailyExpList');
+                    dailyExpListElement.innerHTML = ''; // 기존 '로딩 중...' 메시지 제거
+
+                    const dailyExpData = data.일별총경험치; // 백엔드 응답 필드명 확인
+                    const sortedDates = Object.keys(dailyExpData).sort().reverse(); // 최신순 정렬
+
+                    if (sortedDates.length === 0) {
+                        dailyExpListElement.innerHTML = '<p>표시할 데이터가 없습니다.</p>';
+                        return;
+                    }
+
+                    const ul = document.createElement('ul');
+                    sortedDates.forEach(date => {
+                        const exp = dailyExpData[date];
+                        const formattedExp = exp.toLocaleString('ko-KR'); // 콤마 추가
+                        const li = document.createElement('li');
+                        li.textContent = `${date}: ${formattedExp} EXP`;
+                        ul.appendChild(li);
+                    });
+                    dailyExpListElement.appendChild(ul);
+                })
+                .catch(error => {
+                    console.error('일별 총 경험치 로딩 오류:', error);
+                    const dailyExpListElement = document.getElementById('dailyExpList');
+                    dailyExpListElement.innerHTML = '<p style="color: red;">데이터 로딩 실패</p>';
+                });
+        });
+    </script>
+</body>
+</html>
