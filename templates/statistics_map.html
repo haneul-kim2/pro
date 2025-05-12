@@ -1,127 +1,198 @@
-<!-- C:\pro\templates\statistics_map.html (네비게이션, 제목, 테이블 헤더 등 용어 변경 및 간결화) -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>맵별 요약 - 메이플 수익 기록</title>
-    <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}">
-    <!-- Chart.js CDN (맵별 차트 추가 시 필요할 수 있음, 일단 주석 처리) -->
-    <!-- <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> -->
+    <title>통계 - 맵별 통계</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <!-- Flatpickr CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <style>
-        /* ... (기존 스타일 유지) ... */
-        .filter-section { margin-bottom: 20px; padding: 15px; background-color: #f9f9f9; border-radius: 5px; display: flex; align-items: center; flex-wrap: wrap; gap: 10px;}
-        .filter-section label { margin-right: 5px; }
-        .filter-section input[type="date"], .filter-section input[type="text"], .filter-section button { padding: 8px; border-radius: 3px; border: 1px solid #ccc; }
-        .filter-section button { background-color: #2196F3; color: white; cursor: pointer; }
-        .filter-section button:hover { background-color: #1976D2; }
-        .summary-table-container { margin-top: 20px; }
-        .summary-table { width: 100%; border-collapse: collapse; }
-        .summary-table th, .summary-table td { border: 1px solid #ddd; padding: 8px 10px; font-size: 0.9em;} /* text-align은 class로 제어 */
-        .summary-table th { background-color: #f2f2f2; }
-        .summary-table th.number, .summary-table td.number { text-align: right; }
-        .summary-table th.string, .summary-table td.string { text-align: left; }
+        /* 통계 페이지 스타일 (daily와 유사하게) */
+        th {
+            background-color: #e9ecef;
+            text-align: center;
+            vertical-align: middle;
+        }
+        td {
+            text-align: right;
+            vertical-align: middle;
+        }
+        td:first-child { /* 첫 번째 열 (맵 이름) */
+             text-align: left; /* 맵 이름은 왼쪽 정렬이 보기 좋음 */
+        }
+        .spinner-border-sm {
+             width: 1rem;
+             height: 1rem;
+             border-width: .2em;
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <nav>
-            <a href="{{ url_for('read_root_page_ui') }}">홈</a> |
-            <a href="{{ url_for('ui_list_and_add_meso_sales_page') }}">메소 판매</a> |
-            <a href="{{ url_for('ui_list_and_add_hunting_sessions_page') }}">사냥</a> |
-            <a href="{{ url_for('ui_list_and_add_jjul_sessions_page') }}">쩔</a> |
-            <a href="{{ url_for('ui_statistics_daily_page') }}">일별</a> |
-            <strong>맵별</strong> |
-            <a href="{{ url_for('ui_statistics_weekday_page') }}">요일별</a>
-        </nav>
+    <div class="container mt-4">
+        <h1>📊 통계 분석</h1>
+        <ul class="nav nav-tabs mt-3">
+            <li class="nav-item">
+                <a class="nav-link" href="/statistics/daily">일별 요약</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link active" aria-current="page" href="/statistics/map">맵별 통계</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/statistics/weekday">요일별 통계</a>
+            </li>
+        </ul>
 
-        <h1>맵별 요약</h1>
-
-        <div id="message-area-stats-map">
-            <!-- 메시지 표시 영역 -->
+        <div class="my-4">
+            <h2>🗺️ 맵별 통계 조회</h2>
+            <div class="row g-3 align-items-center">
+                <div class="col-auto">
+                    <label for="startDateMap" class="col-form-label">조회 시작일 (선택):</label>
+                </div>
+                <div class="col-auto">
+                    <input type="text" id="startDateMap" class="form-control flatpickr-input" placeholder="전체 기간">
+                </div>
+                <div class="col-auto">
+                    <label for="endDateMap" class="col-form-label">조회 종료일 (선택):</label>
+                </div>
+                <div class="col-auto">
+                    <input type="text" id="endDateMap" class="form-control flatpickr-input" placeholder="전체 기간">
+                </div>
+                <div class="col-auto">
+                    <button id="fetchMapDataBtn" class="btn btn-primary">조회</button>
+                </div>
+            </div>
+            <div id="loadingIndicatorMap" class="mt-3" style="display: none;">
+                <div class="spinner-border spinner-border-sm text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <span class="ms-2">데이터를 조회하는 중입니다...</span>
+            </div>
+            <div id="error-message-map" class="alert alert-danger mt-3" style="display: none;"></div>
         </div>
 
-        <!-- 기간 필터링 UI -->
-        <div class="filter-section">
-            <label for="mapStartDate">시작 날짜:</label>
-            <input type="date" id="mapStartDate">
-            <label for="mapEndDate">종료 날짜:</label>
-            <input type="date" id="mapEndDate">
-            <button id="viewMapSummaryButton">조회</button>
-            <button id="resetMapDateFilterButton" style="background-color: #757575;">전체 기간 조회</button>
-        </div>
-
-        <div class="summary-table-container">
-            <table id="mapSummaryTable" class="summary-table">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
                 <thead>
                     <tr>
-                        <th class="string">맵 이름</th>
-                        <th class="number">사냥 횟수</th> <!-- 또는 "사냥 타임 수" -->
-                        <th class="number">쩔 횟수</th>   <!-- 또는 "쩔 타임 수" -->
-                        <th class="number">사냥 총순수익</th>
-                        <th class="number">쩔 총순수익</th>
-                        <th class="number">평균 사냥 순수익</th> <!-- "타임당" 또는 "회당"으로 유지 가능 -->
-                        <th class="number">평균 쩔 순수익</th>   <!-- "타임당" 또는 "회당"으로 유지 가능 -->
-                        <th class="number">맵 총 고가템 가치</th>
-                        <th class="number">맵 총 소모템 획득</th>
+                        <th>맵 이름</th>
+                        <th>사냥 횟수</th>
+                        <th>쩔 횟수</th>
+                        <th>총 사냥 수익</th>
+                        <th>총 쩔 수익</th>
+                        <th>고가템 수익</th>
+                        <th>소모템 획득 수익</th>
+                        <th>평균 사냥 수익</th>
+                        <th>평균 쩔 수익</th>
                     </tr>
                 </thead>
-                <tbody id="mapSummaryTableBody">
-                    <tr><td colspan="9" style="text-align:center;">조회할 기간을 선택하거나 전체 기간 조회를 눌러주세요.</td></tr>
+                <tbody id="map-summary-table-body">
+                    <tr>
+                        <td colspan="9" class="text-center">기간을 선택(선택 사항)하고 '조회' 버튼을 클릭하세요.</td>
+                    </tr>
                 </tbody>
             </table>
         </div>
+
+        <div class="text-center my-4">
+            <a href="/" class="btn btn-secondary">메인 화면으로 돌아가기</a>
+        </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ko.js"></script>
+
     <script>
-        // DOM 요소 가져오기 (이전과 동일)
-        const messageAreaStatsMap = document.getElementById('message-area-stats-map');
-        const mapSummaryTableBody = document.getElementById('mapSummaryTableBody');
-        const mapStartDateInput = document.getElementById('mapStartDate');
-        const mapEndDateInput = document.getElementById('mapEndDate');
-        const viewMapSummaryButton = document.getElementById('viewMapSummaryButton');
-        const resetMapDateFilterButton = document.getElementById('resetMapDateFilterButton');
-
-        document.addEventListener('DOMContentLoaded', () => { fetchMapSummary(); }); // 페이지 로드 시 전체 기간으로 한번 조회
-
-        viewMapSummaryButton.addEventListener('click', () => { /* ... (이전과 동일) ... */
-            if (mapStartDateInput.value && mapEndDateInput.value) { fetchMapSummary(mapStartDateInput.value, mapEndDateInput.value); } else { displayStatsMapMessage('시작 날짜와 종료 날짜를 모두 선택해주세요.', 'warning'); }
-        });
-        resetMapDateFilterButton.addEventListener('click', () => { /* ... (이전과 동일) ... */
-            mapStartDateInput.value = ''; mapEndDateInput.value = ''; fetchMapSummary();
+        flatpickr(".flatpickr-input", {
+            dateFormat: "Y-m-d",
+            locale: "ko",
+            allowInput: true, // 직접 입력 허용 (placeholder 유지를 위해)
+            // defaultDate: null // 기본 날짜 선택 안 함 (placeholder 보이도록)
         });
 
-        async function fetchMapSummary(startDate, endDate) { /* ... (기존 fetch 로직과 동일) ... */
-            displayStatsMapMessage('데이터를 불러오는 중...', 'info'); mapSummaryTableBody.innerHTML = '<tr><td colspan="9" style="text-align:center;">데이터를 불러오는 중...</td></tr>';
-            let apiUrl = '/statistics/map-summary'; const params = new URLSearchParams(); if (startDate && endDate) { params.append('start_date', startDate); params.append('end_date', endDate); } if (params.toString()) { apiUrl += `?${params.toString()}`; }
+        const fetchMapDataBtn = document.getElementById('fetchMapDataBtn');
+        const startDateInputMap = document.getElementById('startDateMap');
+        const endDateInputMap = document.getElementById('endDateMap');
+        const mapSummaryTableBody = document.getElementById('map-summary-table-body');
+        const loadingIndicatorMap = document.getElementById('loadingIndicatorMap');
+        const errorMessageDivMap = document.getElementById('error-message-map');
+
+        function formatNumber(num) {
+            if (num === null || num === undefined) return '0';
+            return num.toLocaleString();
+        }
+
+        async function fetchMapSummary() {
+            const startDate = startDateInputMap.value;
+            const endDate = endDateInputMap.value;
+            errorMessageDivMap.style.display = 'none';
+            errorMessageDivMap.textContent = '';
+
+            if (startDate && endDate && startDate > endDate) {
+                errorMessageDivMap.textContent = '시작일은 종료일보다 이전이어야 합니다.';
+                errorMessageDivMap.style.display = 'block';
+                return;
+            }
+
+            loadingIndicatorMap.style.display = 'block';
+            fetchMapDataBtn.disabled = true;
+            mapSummaryTableBody.innerHTML = '<tr><td colspan="9" class="text-center">데이터를 불러오는 중...</td></tr>';
+
+            let url = '/api/statistics/summary/map';
+            const params = new URLSearchParams();
+            if (startDate) params.append('start_date', startDate);
+            if (endDate) params.append('end_date', endDate);
+            if (params.toString()) {
+                url += `?${params.toString()}`;
+            }
+
             try {
-                const response = await fetch(apiUrl);
-                if (!response.ok) { const errorData = await response.json().catch(() => null); let errorMessage = `통계 조회 실패 (상태 코드: ${response.status})`; if (errorData && errorData.detail) { errorMessage += (typeof errorData.detail === 'string') ? (": " + errorData.detail) : (": " + JSON.stringify(errorData.detail)); } displayStatsMapMessage(errorMessage, 'error'); mapSummaryTableBody.innerHTML = `<tr><td colspan="9" style="text-align:center;">${errorMessage}</td></tr>`; return; }
-                const data = await response.json();
-                if (startDate && endDate) { displayStatsMapMessage(`${startDate} ~ ${endDate} 기간의 맵별 통계 조회가 완료되었습니다.`, 'success'); } else { displayStatsMapMessage('전체 기간 맵별 통계 조회가 완료되었습니다.', 'success'); }
-                renderMapSummaryTable(data.summary_items);
-            } catch (error) { console.error('Error fetching map summary:', error); displayStatsMapMessage('통계 조회 중 오류가 발생했습니다. 네트워크를 확인해주세요.', 'error'); mapSummaryTableBody.innerHTML = '<tr><td colspan="9" style="text-align:center;">통계 조회 중 오류 발생</td></tr>'; }
+                const response = await fetch(url);
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || `HTTP error! status: ${response.status} - ${response.statusText}`);
+                }
+                const data = await response.json(); // MapSummaryResponse
+
+                mapSummaryTableBody.innerHTML = ''; // 테이블 내용 비우기
+
+                if (data.summaries && data.summaries.length > 0) {
+                    data.summaries.forEach(item => {
+                        const row = mapSummaryTableBody.insertRow();
+                        row.insertCell().textContent = item.map_name; // 맵 이름은 왼쪽 정렬
+                        row.cells[0].style.textAlign = 'left';
+
+                        row.insertCell().textContent = formatNumber(item.hunt_count);
+                        row.insertCell().textContent = formatNumber(item.jjul_count);
+                        row.insertCell().textContent = formatNumber(item.total_hunt_profit);
+                        row.insertCell().textContent = formatNumber(item.total_jjul_profit);
+                        row.insertCell().textContent = formatNumber(item.total_rare_item_profit);
+                        row.insertCell().textContent = formatNumber(item.total_consumable_gained_profit);
+                        row.insertCell().textContent = formatNumber(item.average_hunt_profit);
+                        row.insertCell().textContent = formatNumber(item.average_jjul_profit);
+                    });
+                } else {
+                    mapSummaryTableBody.innerHTML = '<tr><td colspan="9" class="text-center">해당 기간에 조회된 데이터가 없습니다.</td></tr>';
+                }
+            } catch (error) {
+                console.error('Error fetching map summary:', error);
+                mapSummaryTableBody.innerHTML = `<tr><td colspan="9" class="text-center text-danger">데이터 조회 중 오류 발생: ${error.message}</td></tr>`;
+                errorMessageDivMap.textContent = `데이터 조회 중 오류가 발생했습니다: ${error.message}`;
+                errorMessageDivMap.style.display = 'block';
+            } finally {
+                loadingIndicatorMap.style.display = 'none';
+                fetchMapDataBtn.disabled = false;
+            }
         }
 
-        function renderMapSummaryTable(summaryItems) { /* ... (테이블 렌더링 로직 동일, 텍스트만 주의) ... */
-            mapSummaryTableBody.innerHTML = ''; if (!summaryItems || summaryItems.length === 0) { mapSummaryTableBody.innerHTML = '<tr><td colspan="9" style="text-align:center;">요약할 맵 데이터가 없습니다.</td></tr>'; return; }
-            summaryItems.forEach(item => {
-                const row = mapSummaryTableBody.insertRow();
-                row.insertCell().textContent = item.map_name;
-                row.insertCell().textContent = item.total_hunting_sessions.toLocaleString('ko-KR'); // total_hunting_times 등으로 변경될 수 있음 (스키마 변경 시)
-                row.insertCell().textContent = item.total_jjul_sessions.toLocaleString('ko-KR');   // total_jjul_times 등으로 변경될 수 있음
-                row.insertCell().textContent = item.total_hunting_net_profit.toLocaleString('ko-KR');
-                row.insertCell().textContent = item.total_jjul_net_profit.toLocaleString('ko-KR');
-                row.insertCell().textContent = item.average_hunting_net_profit_per_session.toLocaleString('ko-KR', {maximumFractionDigits: 0}); // per_time 등으로 변경될 수 있음
-                row.insertCell().textContent = item.average_jjul_net_profit_per_session.toLocaleString('ko-KR', {maximumFractionDigits: 0});   // per_time 등으로 변경될 수 있음
-                row.insertCell().textContent = item.total_rare_item_value_from_map.toLocaleString('ko-KR');
-                row.insertCell().textContent = item.total_consumable_gained_profit_from_map.toLocaleString('ko-KR');
-            });
-        }
+        fetchMapDataBtn.addEventListener('click', fetchMapSummary);
 
-        function displayStatsMapMessage(message, type) { /* ... (메시지 표시 동일) ... */
-            if (!messageAreaStatsMap) return; const messageDiv = document.createElement('div'); messageDiv.className = `message ${type}`; messageDiv.textContent = message; messageAreaStatsMap.innerHTML = ''; messageAreaStatsMap.appendChild(messageDiv); setTimeout(() => { if (messageDiv.parentNode === messageAreaStatsMap) { messageAreaStatsMap.removeChild(messageDiv); } }, 5000);
-        }
+        // 페이지 로드 시 기본적으로 전체 기간 데이터 로드
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchMapSummary();
+        });
     </script>
 </body>
 </html>
