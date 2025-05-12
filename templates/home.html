@@ -1,0 +1,72 @@
+<!-- C:\pro\templates\home.html (네비게이션 간결화) -->
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>메이플 수익 기록 웹앱</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}">
+    <style>
+        body { font-family: '맑은 고딕', 'Malgun Gothic', sans-serif; line-height: 1.6; margin: 0; padding: 0; background-color: #f4f4f4; color: #333; }
+        .container { max-width: 960px; margin: 20px auto; padding: 20px; background-color: #fff; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        header h1 { color: #337ab7; text-align: center; margin-bottom: 20px; }
+        nav ul { list-style-type: none; padding: 0; text-align: center; margin-bottom: 30px; }
+        nav ul li { display: inline; margin-right: 15px; }
+        nav ul li a { text-decoration: none; color: #337ab7; font-weight: bold; padding: 8px 12px; border-radius: 4px; transition: background-color 0.3s ease; }
+        nav ul li a:hover, nav ul li a.active { background-color: #337ab7; color: white; }
+        
+        .content-section { margin-bottom: 30px; padding: 20px; border: 1px solid #eee; border-radius: 5px; }
+        .content-section h2 { color: #5cb85c; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-top: 0; }
+        .content-section p { margin-bottom: 10px; }
+        .api-docs-links { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; }
+        .api-docs-links a { margin: 0 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>{{ page_title }}</h1>
+        </header>
+
+        <nav>
+            <ul>
+                <li><a href="{{ url_for('read_root_page_ui') }}" class="active">홈</a></li>
+                <li><a href="{{ url_for('ui_list_and_add_meso_sales_page') }}">메소 판매</a></li>
+                <li><a href="{{ url_for('ui_list_and_add_hunting_sessions_page') }}">사냥</a></li>
+                <li><a href="{{ url_for('ui_list_and_add_jjul_sessions_page') }}">쩔</a></li>
+                <li><a href="{{ url_for('ui_statistics_daily_page') }}">일별</a></li>
+                <li><a href="{{ url_for('ui_statistics_map_page') }}">맵별</a></li>
+                <li><a href="{{ url_for('ui_statistics_weekday_page') }}">요일별</a></li>
+            </ul>
+        </nav>
+
+        <section class="content-section">
+            <h2>프로그램 소개</h2>
+            <p>이 웹 애플리케이션은 메이플스토리 게임 내에서의 수익 활동(메소 판매, 사냥, 쩔)을 기록하고, 다양한 통계를 통해 분석할 수 있도록 돕는 도구입니다.</p>
+            <p>기존 Tkinter 기반의 프로그램을 웹 환경으로 이전하여 사용 편의성과 접근성을 높였습니다.</p>
+        </section>
+
+        <section class="content-section">
+            <h2>주요 기능</h2>
+            <ul>
+                <li>메소 판매 내역 기록 및 조회</li>
+                <li>사냥 활동(획득 메소, 경험치, 아이템 등) 기록 및 조회</li>
+                <li>쩔 활동(수익, 아이템 등) 기록 및 조회</li>
+                <li>일별, 맵별, 요일별 수익 및 활동 통계 시각화</li>
+            </ul>
+        </section>
+        
+        {% if docs_url or redoc_url %}
+        <div class="api-docs-links">
+            <p>개발자용 API 문서:</p>
+            {% if docs_url %}
+            <a href="{{ docs_url }}" target="_blank">Swagger UI</a>
+            {% endif %}
+            {% if redoc_url %}
+            <a href="{{ redoc_url }}" target="_blank">ReDoc</a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>

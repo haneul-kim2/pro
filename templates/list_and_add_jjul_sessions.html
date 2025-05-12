@@ -1,0 +1,266 @@
+<!-- C:\pro\templates\list_and_add_jjul_sessions.html (아이템 이름 자동 완성 추가) -->
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>쩔 기록 - 메이플 수익 기록</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}">
+    <style>
+        /* 기존 스타일 유지 */
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 20px; }
+        .form-section { padding: 15px; border: 1px solid #eee; border-radius: 5px; background-color: #fdfdfd; }
+        .form-section h3 { margin-top: 0; color: #337ab7; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .form-group input[type="text"],
+        .form-group input[type="number"]
+        { width: calc(100% - 12px); padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+
+        .item-list-container { margin-top: 10px; max-height: 200px; overflow-y: auto; border: 1px solid #eee; padding: 10px; }
+        .item-entry { display: flex; gap: 10px; align-items: center; margin-bottom: 8px; padding: 5px; background-color: #f9f9f9; border-radius: 3px;}
+        .item-entry label { font-size: 0.9em; margin-bottom: 0; white-space: nowrap; }
+        .item-entry input { flex-grow: 1; }
+        .item-entry button { padding: 3px 8px; font-size: 0.8em; background-color: #d9534f; color: white; border: none; border-radius: 3px; cursor: pointer; flex-shrink: 0; }
+        .item-entry button:hover { background-color: #c9302c; }
+        .placeholder-text { color: #aaa; font-style: italic; padding: 10px 0; }
+
+        .button-group { margin-top:20px; text-align: center; }
+        /* ... (기타 스타일 이전과 동일) ... */
+        #message-area-jjul .message { padding: 10px; margin-bottom: 15px; border-radius: 4px; font-weight: bold; }
+        #message-area-jjul .success { background-color: #dff0d8; color: #3c763d; border: 1px solid #d6e9c6; }
+        #message-area-jjul .error { background-color: #f2dede; color: #a94442; border: 1px solid #ebccd1; }
+        #message-area-jjul .info { background-color: #d9edf7; color: #31708f; border: 1px solid #bce8f1; }
+        .record-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        .record-table th, .record-table td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size:0.9em; }
+        .record-table th { background-color: #f2f2f2; }
+        .record-table td.number { text-align: right; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <nav>
+             <a href="{{ url_for('read_root_page_ui') }}">홈</a> |
+             <a href="{{ url_for('ui_list_and_add_meso_sales_page') }}">메소 판매</a> |
+             <a href="{{ url_for('ui_list_and_add_hunting_sessions_page') }}">사냥</a> |
+             <strong>쩔</strong> |
+             <a href="{{ url_for('ui_statistics_daily_page') }}">일별</a> |
+             <a href="{{ url_for('ui_statistics_map_page') }}">맵별</a> |
+             <a href="{{ url_for('ui_statistics_weekday_page') }}">요일별</a>
+        </nav>
+
+        <h1>쩔 기록</h1>
+
+        <div id="message-area-jjul">
+            <!-- 메시지 표시 영역 -->
+        </div>
+
+        <form id="addJjulSessionForm">
+            <div class="form-grid">
+                <div class="form-section">
+                    <h3>기본 정보</h3>
+                    <div class="form-group">
+                        <label for="jjul_session_date">날짜:</label>
+                        <input type="text" id="jjul_session_date" name="session_date" required class="date-input" placeholder="YYYY-MM-DD">
+                    </div>
+                    <div class="form-group">
+                        <label for="jjul_map_name">맵 이름:</label>
+                        <input type="text" id="jjul_map_name" name="map_name" required placeholder="예: 고통의 미궁 중심부" list="map-names-list">
+                        <datalist id="map-names-list">
+                            <!-- 옵션은 JavaScript로 채워집니다. -->
+                        </datalist>
+                    </div>
+                    <div class="form-group">
+                        <label for="jjul_start_time">시작 시간 (HH:MM):</label>
+                        <input type="text" id="jjul_start_time" name="start_time" placeholder="예: 20:00" class="time-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="jjul_end_time">종료 시간 (HH:MM):</label>
+                        <input type="text" id="jjul_end_time" name="end_time" placeholder="예: 20:30" class="time-input">
+                    </div>
+                     <div class="form-group">
+                        <label for="jjul_party_size">쩔 인원 수 (본인 제외):</label>
+                        <input type="number" id="jjul_party_size" name="party_size" value="1" min="1" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="jjul_price_per_person">1인당 쩔비 (메소):</label>
+                        <input type="text" id="jjul_price_per_person" name="price_per_person" value="0" required class="numeric-input">
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3>메소 정보</h3>
+                    <div class="form-group">
+                        <label for="jjul_start_meso">시작 메소:</label>
+                        <input type="text" id="jjul_start_meso" name="start_meso" value="0" required class="numeric-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="jjul_end_meso">종료 메소 (쩔비 받고, 잡템 판매 전):</label>
+                        <input type="text" id="jjul_end_meso" name="end_meso" value="0" required class="numeric-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="jjul_sold_meso">최종 메소 (잡템 판매 후):</label>
+                        <input type="text" id="jjul_sold_meso" name="sold_meso" value="0" class="numeric-input">
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h3>획득 아이템</h3>
+                <div>
+                    <h4>고가 아이템</h4>
+                    <div id="jjulRareItemsContainer" class="item-list-container">
+                        <p class="placeholder-text">추가된 고가 아이템이 없습니다.</p>
+                    </div>
+                    <button type="button" id="addJjulRareItemButton" style="margin-top: 5px;">고가 아이템 추가</button>
+                </div>
+                <div style="margin-top: 15px;">
+                    <h4>소모/기타 아이템 (판매 가치 있는 것 또는 사용한 소모품)</h4>
+                    <div id="jjulConsumableItemsContainer" class="item-list-container">
+                        <p class="placeholder-text">추가된 소모/기타 아이템이 없습니다.</p>
+                    </div>
+                    <button type="button" id="addJjulConsumableItemButton" style="margin-top: 5px;">소모/기타 아이템 추가</button>
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button type="submit">쩔 기록 저장</button>
+                <button type="button" id="resetJjulFormButton">입력 초기화</button>
+            </div>
+
+            <!-- 아이템 이름 자동 완성을 위한 Datalists -->
+            <datalist id="rare-item-names-datalist">
+                <!-- 옵션은 JavaScript로 채워집니다 -->
+            </datalist>
+            <datalist id="consumable-item-names-datalist">
+                <!-- 옵션은 JavaScript로 채워집니다 -->
+            </datalist>
+        </form>
+
+        <div id="jjulRecordListContainer">
+            <h2>최근 쩔 기록</h2>
+            <table id="jjulRecordTable" class="record-table">
+                 <thead>
+                     <tr>
+                         <th>ID</th> <th>날짜</th> <th>맵</th> <th>시작시간</th> <th>종료시간</th>
+                         <th class="number">순수익</th> <th class="number">총쩔비</th> <th class="number">일반템</th>
+                         <th class="number">고가템</th> <th class="number">소모템획득</th> <th class="number">소모비용</th>
+                         <th class="number">총수익</th>
+                     </tr>
+                 </thead>
+                 <tbody id="jjulRecordTableBody">
+                     <!-- 데이터는 JavaScript로 채워집니다. -->
+                 </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // DOM 요소 (이전과 동일)
+        const addJjulSessionForm = document.getElementById('addJjulSessionForm');
+        const messageAreaJjul = document.getElementById('message-area-jjul');
+        const jjulRareItemsContainer = document.getElementById('jjulRareItemsContainer');
+        const jjulConsumableItemsContainer = document.getElementById('jjulConsumableItemsContainer');
+        const addJjulRareItemButton = document.getElementById('addJjulRareItemButton');
+        const addJjulConsumableItemButton = document.getElementById('addJjulConsumableItemButton');
+        const resetJjulFormButton = document.getElementById('resetJjulFormButton');
+        const jjulRecordTableBody = document.getElementById('jjulRecordTableBody');
+
+        // --- 숫자 입력 자동 변환 및 포맷팅 함수 (이전과 동일) ---
+        function parseNumericInput(value) { /* ... 이전 코드 ... */ if (!value || typeof value !== 'string') return 0; let numStr = value.trim().toLowerCase().replace(/,/g, ''); if (!numStr) return 0; let number = 0; const patterns = { '억': 100000000, '만': 10000, '천': 1000, 'm': 1000000, 'k': 1000 }; const units = ['억', '만', '천', 'm', 'k']; const unitRegex = new RegExp(`([\\d\\.\\s]+)(${units.join('|')})`, 'g'); const parts = []; let lastIndex = 0; numStr = numStr.replace(/\s+/g, ''); while (true) { const match = unitRegex.exec(numStr); if (!match) { parts.push({ value: numStr.substring(lastIndex), unit: null }); break; } const valuePart = numStr.substring(lastIndex, match.index).trim(); if (valuePart) { parts.push({ value: valuePart, unit: null }); } parts.push({ value: match[1].trim(), unit: match[2] }); lastIndex = unitRegex.lastIndex; } parts.forEach(part => { try { const val = parseFloat(part.value); if (!isNaN(val)) { if (part.unit && patterns[part.unit]) { number += val * patterns[part.unit]; } else if (!part.unit) { number += val; } } } catch (e) { console.error("Numeric parsing error in part:", part, e); } }); return Math.round(number); }
+        function formatNumberWithCommas(number) { /* ... 이전 코드 ... */ if (isNaN(number) || number === null) return '0'; return number.toLocaleString('en-US'); }
+        function applyNumericFormatting(inputElement) { /* ... 이전 코드 ... */ if (!inputElement || typeof inputElement.value === 'undefined') return; const rawValue = inputElement.value; const numericValue = parseNumericInput(rawValue); inputElement.value = formatNumberWithCommas(numericValue); }
+        // --- (숫자 포맷팅 함수 끝) ---
+
+        // --- 날짜 및 시간 입력 자동 포맷팅 함수 (이전과 동일) ---
+        function formatDateInput(inputElement) { /* ... 이전 코드 ... */ let value = inputElement.value.trim(); if (!value) return; value = value.replace(/[^0-9.\-\/]/g, ''); if (!value) return; let year, month, day; const today = new Date(); const currentYear = today.getFullYear(); const currentMonth = today.getMonth() + 1; const currentDay = today.getDate(); let match; let formattedDate = ''; if (match = value.match(/^(\d{4})[\.\-\/](\d{1,2})[\.\-\/](\d{1,2})$/)) { year = parseInt(match[1]); month = parseInt(match[2]); day = parseInt(match[3]); } else if (match = value.match(/^(\d{4})(\d{2})(\d{2})$/)) { year = parseInt(match[1]); month = parseInt(match[2]); day = parseInt(match[3]); } else if (match = value.match(/^(\d{2})[\.\-\/](\d{1,2})[\.\-\/](\d{1,2})$/)) { year = 2000 + parseInt(match[1]); month = parseInt(match[2]); day = parseInt(match[3]); } else if (match = value.match(/^(\d{2})(\d{2})(\d{2})$/)) { year = 2000 + parseInt(match[1]); month = parseInt(match[2]); day = parseInt(match[3]); } else if (match = value.match(/^(\d{1,2})[\.\-\/](\d{1,2})$/)) { year = currentYear; month = parseInt(match[1]); day = parseInt(match[2]); } else if (match = value.match(/^(\d{4})$/)) { year = currentYear; month = parseInt(value.substring(0, 2)); day = parseInt(value.substring(2, 4)); } else if (match = value.match(/^(\d{3})$/)) { year = currentYear; month = parseInt(value.substring(0, 1)); day = parseInt(value.substring(1, 3)); } if (year !== undefined && month !== undefined && day !== undefined) { if (month >= 1 && month <= 12 && day >= 1 && day <= 31) { try { const dateObj = new Date(year, month - 1, day); if (dateObj.getFullYear() === year && dateObj.getMonth() + 1 === month && dateObj.getDate() === day) { formattedDate = `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`; } else { console.warn(`Invalid date components derived: ${year}-${month}-${day}. Input was '${value}'.`); } } catch (e) { console.error("Error creating/validating date:", e); } } else { console.warn(`Month or day out of basic range: ${year}-${month}-${day}. Input was '${value}'.`); } } if (formattedDate) { inputElement.value = formattedDate; } else { console.warn(`Could not parse '${value}' into a valid YYYY-MM-DD format. Setting to today.`); inputElement.value = today.toISOString().split('T')[0]; } }
+        function formatTimeInput(inputElement) { /* ... 이전 코드 ... */ let value = inputElement.value.trim(); if (!value) return; value = value.replace(/[^0-9:]/g, ''); let hour, minute; let match; if (match = value.match(/^([01]\d|2[0-3]):([0-5]\d)$/)) { return; } else if (value.length === 4 && /^[0-9]+$/.test(value)) { hour = parseInt(value.substring(0, 2)); minute = parseInt(value.substring(2, 4)); } else if (value.length === 3 && /^[0-9]+$/.test(value)) { hour = parseInt(value.substring(0, 1)); minute = parseInt(value.substring(1, 3)); } if (hour !== undefined && minute !== undefined) { if (hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) { inputElement.value = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`; } else { console.warn(`Invalid time input detected: ${value}. Clearing input.`); inputElement.value = ''; } } }
+        function autoInsertTimeColon(event) { /* ... 이전 코드 ... */ const inputElement = event.target; let value = inputElement.value; if (value.length === 2 && /^\d{2}$/.test(value) && event.key !== 'Backspace') { const hour = parseInt(value); if (hour >= 0 && hour <= 23) { inputElement.value = value + ':'; } } }
+        // --- (날짜/시간 함수 끝) ---
+
+        // --- 맵 이름 자동 완성 목록 로드 함수 (이전과 동일) ---
+        async function loadMapNameSuggestions() { /* ... 이전 코드 ... */ const dataList = document.getElementById('map-names-list'); if (!dataList) return; try { const response = await fetch('/statistics/map-names/unique'); if (!response.ok) { throw new Error('맵 이름 목록 로딩 실패'); } const mapNames = await response.json(); mapNames.forEach(name => { const option = document.createElement('option'); option.value = name; dataList.appendChild(option); }); console.log("Map names loaded for datalist (Jjul):", mapNames.length); } catch (error) { console.error('Error loading map names:', error); } }
+        // --- (맵 이름 함수 끝) ---
+
+        // --- 아이템 이름 자동 완성 목록 로드 함수 (추가됨) ---
+        async function loadItemNameSuggestions() {
+            const rareDatalist = document.getElementById('rare-item-names-datalist');
+            const consumableDatalist = document.getElementById('consumable-item-names-datalist');
+
+            if (rareDatalist) {
+                try {
+                    const response = await fetch('/statistics/rare-item-names/unique');
+                    if (!response.ok) throw new Error('고가템 목록 로딩 실패');
+                    const names = await response.json();
+                    names.forEach(name => { const option = document.createElement('option'); option.value = name; rareDatalist.appendChild(option); });
+                    console.log("Rare item names loaded (Jjul):", names.length);
+                } catch (error) { console.error('Error loading rare item names:', error); }
+            }
+            if (consumableDatalist) {
+                try {
+                    const response = await fetch('/statistics/consumable-item-names/unique');
+                    if (!response.ok) throw new Error('소모템 목록 로딩 실패');
+                    const names = await response.json();
+                    names.forEach(name => { const option = document.createElement('option'); option.value = name; consumableDatalist.appendChild(option); });
+                    console.log("Consumable item names loaded (Jjul):", names.length);
+                } catch (error) { console.error('Error loading consumable item names:', error); }
+            }
+        }
+        // --- (아이템 이름 함수 끝) ---
+
+
+        // 페이지 로드 시 초기화 함수들 호출
+        document.addEventListener('DOMContentLoaded', function() {
+            const dateInput = document.getElementById('jjul_session_date');
+            dateInput.value = new Date().toISOString().split('T')[0];
+
+            fetchRecentJjulRecords();
+            loadMapNameSuggestions();
+            loadItemNameSuggestions(); // 아이템 이름 목록 로드 추가
+            togglePlaceholder(jjulRareItemsContainer, '.rare-item-row-jjul');
+            togglePlaceholder(jjulConsumableItemsContainer, '.consumable-item-row-jjul');
+        });
+
+        // --- 이벤트 리스너 등록 (이전과 동일) ---
+        addJjulSessionForm.addEventListener('blur', function(event) { if (event.target.matches('input.date-input')) { formatDateInput(event.target); } else if (event.target.matches('input.time-input')) { formatTimeInput(event.target); } else if (event.target.matches('input.numeric-input')) { applyNumericFormatting(event.target); } }, true);
+        function handleItemInputBlurJjul(event) { if (event.target.matches('input[name="rare_item_value_jjul"]') || event.target.matches('input[name="consumable_item_price_jjul"]')) { applyNumericFormatting(event.target); } }
+        jjulRareItemsContainer.addEventListener('blur', handleItemInputBlurJjul, true);
+        jjulConsumableItemsContainer.addEventListener('blur', handleItemInputBlurJjul, true);
+        addJjulSessionForm.addEventListener('keyup', function(event) { if (event.target.matches('input.time-input')) { autoInsertTimeColon(event); } });
+        // --- (이벤트 리스너 등록 끝) ---
+
+
+        function togglePlaceholder(container, itemClass) { /* ... 이전 코드 ... */ const placeholder = container.querySelector('.placeholder-text'); const items = container.querySelectorAll(itemClass); if (placeholder) { placeholder.style.display = items.length === 0 ? 'block' : 'none'; } }
+
+        // 고가 아이템 추가 (list 속성 추가)
+        addJjulRareItemButton.addEventListener('click', function() {
+            const entryDiv = document.createElement('div'); entryDiv.classList.add('item-entry', 'rare-item-row-jjul');
+            entryDiv.innerHTML = `<label>아이템명:</label> <input type="text" name="rare_item_name_jjul" placeholder="예: 칠흑 보스 장신구" style="width: 150px; flex-grow: 2;" list="rare-item-names-datalist"> <label>예상 가치:</label> <input type="text" name="rare_item_value_jjul" value="0" style="width: 100px; text-align: right;"> <button type="button" class="remove-item-btn">삭제</button>`;
+            jjulRareItemsContainer.appendChild(entryDiv); entryDiv.querySelector('.remove-item-btn').addEventListener('click', function() { entryDiv.remove(); togglePlaceholder(jjulRareItemsContainer, '.rare-item-row-jjul'); }); togglePlaceholder(jjulRareItemsContainer, '.rare-item-row-jjul');
+        });
+
+        // 소모/기타 아이템 추가 (list 속성 추가)
+        addJjulConsumableItemButton.addEventListener('click', function() {
+            const entryDiv = document.createElement('div'); entryDiv.classList.add('item-entry', 'consumable-item-row-jjul');
+            entryDiv.innerHTML = `<label>명칭:</label> <input type="text" name="consumable_item_name_jjul" placeholder="예: 경험치 쿠폰" style="width: 120px; flex-grow: 1.5;" list="consumable-item-names-datalist"> <label>개당 가격/가치:</label> <input type="text" name="consumable_item_price_jjul" value="0" style="width: 80px; text-align: right;"> <label>시작 수:</label> <input type="number" name="consumable_item_start_qty_jjul" value="0" min="0" style="width: 50px; text-align: right;"> <label>종료 수:</label> <input type="number" name="consumable_item_end_qty_jjul" value="0" min="0" style="width: 50px; text-align: right;"> <button type="button" class="remove-item-btn">삭제</button>`;
+            jjulConsumableItemsContainer.appendChild(entryDiv); entryDiv.querySelector('.remove-item-btn').addEventListener('click', function() { entryDiv.remove(); togglePlaceholder(jjulConsumableItemsContainer, '.consumable-item-row-jjul'); }); togglePlaceholder(jjulConsumableItemsContainer, '.consumable-item-row-jjul');
+        });
+
+        // 폼 제출 (이전과 동일)
+        addJjulSessionForm.addEventListener('submit', async function(event) { /* ... 이전 코드 (서버 통신 및 결과 처리) ... */ event.preventDefault(); displayJjulMessage('저장 중...', 'info'); const formData = new FormData(addJjulSessionForm); const getNumericValueJjul = (fieldName) => { const inputElement = addJjulSessionForm.querySelector(`[name="${fieldName}"]`); if (inputElement && inputElement.classList.contains('numeric-input')) { return parseNumericInput(inputElement.value); } else if (inputElement) { return parseInt(inputElement.value.replace(/,/g, '')) || 0; } return 0; }; const data = { session_date: formData.get('session_date'), map_name: formData.get('map_name'), start_time: formData.get('start_time') || null, end_time: formData.get('end_time') || null, party_size: parseInt(formData.get('party_size')) || 1, price_per_person: getNumericValueJjul('price_per_person'), start_meso: getNumericValueJjul('start_meso'), end_meso: getNumericValueJjul('end_meso'), sold_meso: getNumericValueJjul('sold_meso'), rare_items: [], consumable_items: [] }; document.querySelectorAll('#jjulRareItemsContainer .rare-item-row-jjul').forEach(row => { const name = row.querySelector('input[name="rare_item_name_jjul"]').value.trim(); const valueInput = row.querySelector('input[name="rare_item_value_jjul"]'); const value = parseNumericInput(valueInput.value); if (name && value > 0) { data.rare_items.push({ item_name: name, item_value: value }); } }); document.querySelectorAll('#jjulConsumableItemsContainer .consumable-item-row-jjul').forEach(row => { const name = row.querySelector('input[name="consumable_item_name_jjul"]').value.trim(); const priceInput = row.querySelector('input[name="consumable_item_price_jjul"]'); const price = parseNumericInput(priceInput.value); const startQty = parseInt(row.querySelector('input[name="consumable_item_start_qty_jjul"]').value.replace(/,/g, '')) || 0; const endQty = parseInt(row.querySelector('input[name="consumable_item_end_qty_jjul"]').value.replace(/,/g, '')) || 0; if (name && (price > 0 || startQty !== 0 || endQty !== 0)) { data.consumable_items.push({ item_name: name, price_or_value_per_item: price, start_quantity: startQty, end_quantity: endQty }); } }); console.log("Submitting Jjul data:", data); try { const response = await fetch('/jjul-sessions/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }); const result = await response.json(); if (!response.ok) { let errorMessage = `저장 실패 (HTTP ${response.status})`; if (result && result.detail) { if (Array.isArray(result.detail)) { errorMessage = "입력 값 오류:\n"; result.detail.forEach(err => { errorMessage += `- ${err.loc.join(' > ')}: ${err.msg}\n`; }); } else { errorMessage = `저장 실패: ${result.detail}`; } } console.error("Save failed detail:", result); throw new Error(errorMessage); } displayJjulMessage(`쩔 기록(ID: ${result.id})이 성공적으로 저장되었습니다.`, 'success'); addJjulSessionForm.reset(); document.getElementById('jjul_session_date').value = new Date().toISOString().split('T')[0]; jjulRareItemsContainer.innerHTML = '<p class="placeholder-text">추가된 고가 아이템이 없습니다.</p>'; jjulConsumableItemsContainer.innerHTML = '<p class="placeholder-text">추가된 소모/기타 아이템이 없습니다.</p>'; togglePlaceholder(jjulRareItemsContainer, '.rare-item-row-jjul'); togglePlaceholder(jjulConsumableItemsContainer, '.consumable-item-row-jjul'); fetchRecentJjulRecords(); } catch (error) { console.error('Error saving jjul session:', error); const messageToShow = error.message.length > 300 ? error.message.substring(0, 300) + "..." : error.message; displayJjulMessage(messageToShow || '저장 중 오류가 발생했습니다.', 'error'); } });
+
+        // 초기화 버튼 이벤트 (이전과 동일)
+        resetJjulFormButton.addEventListener('click', function() { /* ... 이전 코드 ... */ if (confirm("입력한 모든 내용을 초기화하시겠습니까?")) { addJjulSessionForm.reset(); document.getElementById('jjul_session_date').value = new Date().toISOString().split('T')[0]; jjulRareItemsContainer.innerHTML = '<p class="placeholder-text">추가된 고가 아이템이 없습니다.</p>'; jjulConsumableItemsContainer.innerHTML = '<p class="placeholder-text">추가된 소모/기타 아이템이 없습니다.</p>'; togglePlaceholder(jjulRareItemsContainer, '.rare-item-row-jjul'); togglePlaceholder(jjulConsumableItemsContainer, '.consumable-item-row-jjul'); displayJjulMessage('입력 필드가 초기화되었습니다.', 'info'); } });
+
+        // 메시지 표시 함수 (이전과 동일)
+        function displayJjulMessage(message, type) { /* ... 이전 코드 ... */ messageAreaJjul.innerHTML = `<div class="message ${type}">${message.replace(/\n/g, '<br>')}</div>`; }
+
+        // 최근 기록 로드 함수 (이전과 동일)
+        async function fetchRecentJjulRecords() { /* ... 이전 코드 ... */ try { const response = await fetch('/jjul-sessions/?skip=0&limit=10'); if (!response.ok) { throw new Error('최근 기록을 불러오는데 실패했습니다.'); } const records = await response.json(); renderJjulRecords(records); } catch (error) { console.error("Error fetching recent jjul records:", error); jjulRecordTableBody.innerHTML = `<tr><td colspan="12" style="text-align:center;">기록을 불러오는 중 오류 발생</td></tr>`; } }
+
+        // 최근 기록 렌더링 함수 (이전과 동일)
+        function renderJjulRecords(records) { /* ... 이전 코드 ... */ jjulRecordTableBody.innerHTML = ''; if (!records || records.length === 0) { jjulRecordTableBody.innerHTML = `<tr><td colspan="12" style="text-align:center;">아직 기록된 쩔이 없습니다.</td></tr>`; return; } const formatNum = (num, digits = 0) => typeof num === 'number' ? num.toLocaleString(undefined, {maximumFractionDigits: digits}) : (num || '-'); const safeGet = (obj, path, defaultValue = '-') => { const value = path.split('.').reduce((o, k) => (o || {})[k], obj); return value !== undefined && value !== null ? value : defaultValue; }; records.forEach(record => { const row = jjulRecordTableBody.insertRow(); row.insertCell().textContent = safeGet(record, 'id'); row.insertCell().textContent = safeGet(record, 'session_date'); row.insertCell().textContent = safeGet(record, 'map_name'); row.insertCell().textContent = safeGet(record, 'start_time'); row.insertCell().textContent = safeGet(record, 'end_time'); row.insertCell().textContent = formatNum(safeGet(record, 'net_profit', 0)); row.insertCell().textContent = formatNum(safeGet(record, 'total_jjul_fee', 0)); row.insertCell().textContent = formatNum(safeGet(record, 'normal_item_profit', 0)); row.insertCell().textContent = formatNum(safeGet(record, 'total_rare_item_value', 0)); row.insertCell().textContent = formatNum(safeGet(record, 'total_consumable_gained_profit', 0)); row.insertCell().textContent = formatNum(safeGet(record, 'total_consumable_cost', 0)); row.insertCell().textContent = formatNum(safeGet(record, 'total_profit', 0)); }); }
+
+    </script>
+</body>
+</html>

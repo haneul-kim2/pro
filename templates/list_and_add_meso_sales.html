@@ -1,0 +1,191 @@
+<!-- C:\pro\templates\list_and_add_meso_sales.html (날짜 자동 포맷팅 기능 추가) -->
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>메소 판매 - 메이플 수익 기록</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}">
+    <style>
+        /* 다른 페이지와 유사한 스타일 */
+        .form-section { padding: 20px; border: 1px solid #eee; border-radius: 5px; background-color: #fdfdfd; max-width: 600px; margin: 20px auto; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+        /* input type="text" 로 변경 */
+        .form-group input[type="text"]
+        { width: calc(100% - 12px); padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+        .calculated-value { font-weight: bold; color: #337ab7; font-size: 1.1em; }
+
+        .button-group { margin-top:20px; text-align: center; }
+        .button-group button { padding: 10px 20px; margin-right: 10px; border-radius: 4px; cursor: pointer; border: none; }
+        .button-group button[type="submit"] { background-color: #5cb85c; color: white; }
+        .button-group button[type="submit"]:hover { background-color: #4cae4c; }
+        .button-group button[type="button"] { background-color: #f0ad4e; color: white; }
+        .button-group button[type="button"]:hover { background-color: #eea236; }
+
+        #mesoSaleRecordListContainer { margin-top: 30px; }
+        #mesoSaleRecordListContainer h2 { border-bottom: 1px solid #ddd; padding-bottom: 10px; }
+        .record-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        .record-table th, .record-table td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size:0.9em; }
+        .record-table th { background-color: #f2f2f2; }
+        .record-table td.number { text-align: right; }
+
+        /* 메시지 영역 스타일 */
+        #message-area-meso-sale .message { padding: 10px; margin-bottom: 15px; border-radius: 4px; font-weight: bold; }
+        #message-area-meso-sale .success { background-color: #dff0d8; color: #3c763d; border: 1px solid #d6e9c6; }
+        #message-area-meso-sale .error { background-color: #f2dede; color: #a94442; border: 1px solid #ebccd1; }
+        #message-area-meso-sale .info { background-color: #d9edf7; color: #31708f; border: 1px solid #bce8f1; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <nav>
+             <a href="{{ url_for('read_root_page_ui') }}">홈</a> |
+             <strong>메소 판매</strong> |
+             <a href="{{ url_for('ui_list_and_add_hunting_sessions_page') }}">사냥</a> |
+             <a href="{{ url_for('ui_list_and_add_jjul_sessions_page') }}">쩔</a> |
+             <a href="{{ url_for('ui_statistics_daily_page') }}">일별</a> |
+             <a href="{{ url_for('ui_statistics_map_page') }}">맵별</a> |
+             <a href="{{ url_for('ui_statistics_weekday_page') }}">요일별</a>
+        </nav>
+
+        <h1>메소 판매 기록</h1>
+
+        <div id="message-area-meso-sale">
+            <!-- 메시지 표시 영역 -->
+        </div>
+
+        <div class="form-section">
+             <form id="addMesoSaleForm">
+                <div class="form-group">
+                    <label for="sale_date">판매 날짜:</label>
+                    <!-- type="text"로 변경, class 추가 -->
+                    <input type="text" id="sale_date" name="sale_date" required class="date-input" placeholder="YYYY-MM-DD">
+                </div>
+                <div class="form-group">
+                    <label for="total_meso_sold">총 판매 메소량:</label>
+                    <input type="text" id="total_meso_sold" name="total_meso_sold" required placeholder="예: 1.5억, 250만, 150m, 150000000" class="numeric-input meso-unit-input">
+                </div>
+                <div class="form-group">
+                    <label for="price_per_1m_meso">100만 메소당 단가 (원):</label>
+                    <input type="text" id="price_per_1m_meso" name="price_per_1m_meso" required placeholder="예: 3000" class="numeric-input krw-input">
+                </div>
+                <div class="form-group">
+                    <label>총 판매액 (원):</label>
+                    <span id="total_sale_value_label" class="calculated-value">0 원</span>
+                </div>
+                <div class="button-group">
+                    <button type="submit">판매 기록 저장</button>
+                    <button type="button" id="resetMesoSaleFormButton">입력 초기화</button>
+                </div>
+            </form>
+        </div>
+
+        <div id="mesoSaleRecordListContainer">
+            <h2>최근 메소 판매 기록</h2>
+            <table id="mesoSaleRecordTable" class="record-table">
+                 <thead>
+                     <tr>
+                         <th>ID</th> <th>판매일</th> <th class="number">단가(원)/100만</th>
+                         <th class="number">판매량(억 메소)</th> <th class="number">총 판매액(원)</th>
+                     </tr>
+                 </thead>
+                 <tbody id="mesoSaleRecordTableBody">
+                     <!-- 데이터는 JavaScript로 채워집니다. -->
+                 </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // DOM 요소 (이전과 동일)
+        const addMesoSaleForm = document.getElementById('addMesoSaleForm');
+        const totalMesoSoldInput = document.getElementById('total_meso_sold');
+        const pricePer1mMesoInput = document.getElementById('price_per_1m_meso');
+        const totalSaleValueLabel = document.getElementById('total_sale_value_label');
+        const messageAreaMesoSale = document.getElementById('message-area-meso-sale');
+        const resetMesoSaleFormButton = document.getElementById('resetMesoSaleFormButton');
+        const mesoSaleRecordTableBody = document.getElementById('mesoSaleRecordTableBody');
+
+        // --- 숫자 입력 자동 변환 및 포맷팅 함수 (이전과 동일) ---
+        function parseNumericInput(value, allowUnits = true) { /* ... 이전 코드 ... */
+             if (!value || typeof value !== 'string') return 0; let numStr = value.trim().toLowerCase().replace(/,/g, ''); if (!numStr) return 0; let number = 0; if (allowUnits) { const patterns = { '억': 100000000, '만': 10000, '천': 1000, 'm': 1000000, 'k': 1000 }; const units = ['억', '만', '천', 'm', 'k']; const unitRegex = new RegExp(`([\\d\\.\\s]+)(${units.join('|')})`, 'g'); const parts = []; let lastIndex = 0; numStr = numStr.replace(/\s+/g, ''); while (true) { const match = unitRegex.exec(numStr); if (!match) { parts.push({ value: numStr.substring(lastIndex), unit: null }); break; } const valuePart = numStr.substring(lastIndex, match.index).trim(); if (valuePart) { parts.push({ value: valuePart, unit: null }); } parts.push({ value: match[1].trim(), unit: match[2] }); lastIndex = unitRegex.lastIndex; } parts.forEach(part => { try { const val = parseFloat(part.value); if (!isNaN(val)) { if (part.unit && patterns[part.unit]) { number += val * patterns[part.unit]; } else if (!part.unit) { number += val; } } } catch (e) { console.error("Numeric parsing error in part:", part, e); } }); } else { if (!isNaN(parseFloat(numStr)) && isFinite(numStr)) { try { number = parseFloat(numStr); } catch (e) { console.error("KRW parsing error:", e); } } } return Math.round(number);
+        }
+        function formatNumberWithCommas(number) { /* ... 이전 코드 ... */
+             if (isNaN(number) || number === null) return '0'; return number.toLocaleString('en-US');
+        }
+        function applyNumericFormatting(inputElement) { /* ... 이전 코드 ... */
+             if (!inputElement || typeof inputElement.value === 'undefined') return; const rawValue = inputElement.value; const allowUnits = inputElement.classList.contains('meso-unit-input'); const numericValue = parseNumericInput(rawValue, allowUnits); inputElement.value = formatNumberWithCommas(numericValue);
+        }
+        // --- (숫자 포맷팅 함수 끝) ---
+
+
+        // --- 날짜 입력 자동 포맷팅 함수 (추가됨) ---
+        function formatDateInput(inputElement) { /* ... (사냥 페이지와 동일한 함수 코드) ... */
+            let value = inputElement.value.trim(); if (!value) return; value = value.replace(/[^0-9.\-\/]/g, ''); if (!value) return; let year, month, day; const today = new Date(); const currentYear = today.getFullYear(); const currentMonth = today.getMonth() + 1; const currentDay = today.getDate(); let match; let formattedDate = ''; if (match = value.match(/^(\d{4})[\.\-\/](\d{1,2})[\.\-\/](\d{1,2})$/)) { year = parseInt(match[1]); month = parseInt(match[2]); day = parseInt(match[3]); } else if (match = value.match(/^(\d{4})(\d{2})(\d{2})$/)) { year = parseInt(match[1]); month = parseInt(match[2]); day = parseInt(match[3]); } else if (match = value.match(/^(\d{2})[\.\-\/](\d{1,2})[\.\-\/](\d{1,2})$/)) { year = 2000 + parseInt(match[1]); month = parseInt(match[2]); day = parseInt(match[3]); } else if (match = value.match(/^(\d{2})(\d{2})(\d{2})$/)) { year = 2000 + parseInt(match[1]); month = parseInt(match[2]); day = parseInt(match[3]); } else if (match = value.match(/^(\d{1,2})[\.\-\/](\d{1,2})$/)) { year = currentYear; month = parseInt(match[1]); day = parseInt(match[2]); } else if (match = value.match(/^(\d{4})$/)) { year = currentYear; month = parseInt(value.substring(0, 2)); day = parseInt(value.substring(2, 4)); } else if (match = value.match(/^(\d{3})$/)) { year = currentYear; month = parseInt(value.substring(0, 1)); day = parseInt(value.substring(1, 3)); } if (year !== undefined && month !== undefined && day !== undefined) { if (month >= 1 && month <= 12 && day >= 1 && day <= 31) { try { const dateObj = new Date(year, month - 1, day); if (dateObj.getFullYear() === year && dateObj.getMonth() + 1 === month && dateObj.getDate() === day) { formattedDate = `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`; } else { console.warn(`Invalid date components derived: ${year}-${month}-${day}. Input was '${value}'.`); } } catch (e) { console.error("Error creating/validating date:", e); } } else { console.warn(`Month or day out of basic range: ${year}-${month}-${day}. Input was '${value}'.`); } } if (formattedDate) { inputElement.value = formattedDate; } else { console.warn(`Could not parse '${value}' into a valid YYYY-MM-DD format. Setting to today.`); inputElement.value = today.toISOString().split('T')[0]; }
+        }
+        // --- (날짜 함수 끝) ---
+
+
+        // 총 판매액 계산 및 업데이트 함수 (이전과 동일)
+        function updateTotalSaleValue() { /* ... 이전 코드 ... */
+             try { const totalMesoSold = parseNumericInput(totalMesoSoldInput.value, true); const pricePer1mMeso = parseNumericInput(pricePer1mMesoInput.value, false); if (totalMesoSold < 0 || pricePer1mMeso < 0) { totalSaleValueLabel.textContent = "음수 오류"; return; } const quantityIn1MUnits = totalMesoSold / 1000000.0; const totalValue = Math.round(quantityIn1MUnits * pricePer1mMeso); totalSaleValueLabel.textContent = `${formatNumberWithCommas(totalValue)} 원`; } catch (error) { console.error("Error calculating total sale value:", error); totalSaleValueLabel.textContent = "계산 오류"; }
+        }
+
+        // 페이지 로드 시 오늘 날짜 설정 및 최근 기록 로드
+        document.addEventListener('DOMContentLoaded', function() {
+            const dateInput = document.getElementById('sale_date');
+            dateInput.value = new Date().toISOString().split('T')[0]; // YYYY-MM-DD 형식 확인
+            fetchRecentMesoSales();
+            updateTotalSaleValue(); // 초기 계산
+        });
+
+        // --- 이벤트 리스너 등록 ---
+        addMesoSaleForm.addEventListener('blur', function(event) {
+            if (event.target.matches('input.date-input')) {
+                formatDateInput(event.target); // 날짜 포맷팅 적용
+            } else if (event.target.matches('input.numeric-input')) {
+                applyNumericFormatting(event.target); // 숫자 포맷팅 적용
+                // 숫자 포맷팅 후 계산 업데이트
+                updateTotalSaleValue();
+            }
+        }, true);
+
+        // 입력 필드 값 변경 시 실시간 계산 업데이트
+        addMesoSaleForm.addEventListener('input', function(event) {
+             if (event.target.matches('#total_meso_sold') || event.target.matches('#price_per_1m_meso')) {
+                updateTotalSaleValue();
+            }
+        });
+        // --- (이벤트 리스너 등록 끝) ---
+
+
+        // 폼 제출 (이전과 동일, 날짜는 포맷팅된 값 사용됨)
+        addMesoSaleForm.addEventListener('submit', async function(event) { /* ... 이전 코드 ... */
+             event.preventDefault(); displayMesoSaleMessage('저장 중...', 'info'); const totalMesoSold = parseNumericInput(totalMesoSoldInput.value, true); const pricePer1mMeso = parseNumericInput(pricePer1mMesoInput.value, false); const saleDate = document.getElementById('sale_date').value; if (!saleDate) { displayMesoSaleMessage('판매 날짜를 입력해주세요.', 'error'); return; } if (totalMesoSold <= 0) { displayMesoSaleMessage('총 판매 메소량은 0보다 커야 합니다.', 'error'); return; } if (pricePer1mMeso <= 0) { displayMesoSaleMessage('100만 메소당 단가는 0보다 커야 합니다.', 'error'); return; } const data = { sale_date: saleDate, price_per_1m_meso: pricePer1mMeso, quantity_sold_in_1m_units: totalMesoSold / 1000000.0 }; console.log("Submitting Meso Sale data:", data);
+             try { const response = await fetch('/meso-sales/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }); const result = await response.json(); if (!response.ok) { let errorMessage = `저장 실패 (HTTP ${response.status})`; if (result && result.detail) { if (Array.isArray(result.detail)) {errorMessage = "입력 값 오류:\n"; result.detail.forEach(err => { errorMessage += `- ${err.loc.join(' > ')}: ${err.msg}\n`; });} else { errorMessage = `저장 실패: ${result.detail}`; } } console.error("Save failed detail:", result); throw new Error(errorMessage); } displayMesoSaleMessage(`메소 판매 기록(ID: ${result.id})이 성공적으로 저장되었습니다.`, 'success'); addMesoSaleForm.reset(); document.getElementById('sale_date').value = new Date().toISOString().split('T')[0]; updateTotalSaleValue(); fetchRecentMesoSales(); } catch (error) { console.error('Error saving meso sale:', error); const messageToShow = error.message.length > 300 ? error.message.substring(0, 300) + "..." : error.message; displayMesoSaleMessage(messageToShow || '저장 중 오류가 발생했습니다.', 'error'); }
+        });
+
+        // 초기화 버튼 이벤트 (이전과 동일)
+        resetMesoSaleFormButton.addEventListener('click', function() { /* ... 이전 코드 ... */
+             if (confirm("입력한 모든 내용을 초기화하시겠습니까?")) { addMesoSaleForm.reset(); document.getElementById('sale_date').value = new Date().toISOString().split('T')[0]; updateTotalSaleValue(); displayMesoSaleMessage('입력 필드가 초기화되었습니다.', 'info'); }
+         });
+
+        // 메시지 표시 함수 (이전과 동일)
+        function displayMesoSaleMessage(message, type) { /* ... 이전 코드 ... */
+             messageAreaMesoSale.innerHTML = `<div class="message ${type}">${message.replace(/\n/g, '<br>')}</div>`;
+        }
+
+        // 최근 판매 기록 로드 함수 (이전과 동일)
+        async function fetchRecentMesoSales() { /* ... 이전 코드 ... */
+             try { const response = await fetch('/meso-sales/?skip=0&limit=10'); if (!response.ok) { throw new Error('최근 기록을 불러오는데 실패했습니다.'); } const records = await response.json(); renderMesoSaleRecords(records); } catch (error) { console.error("Error fetching recent meso sales:", error); mesoSaleRecordTableBody.innerHTML = `<tr><td colspan="5" style="text-align:center;">기록을 불러오는 중 오류 발생</td></tr>`; }
+         }
+
+        // 최근 판매 기록 렌더링 함수 (이전과 동일)
+        function renderMesoSaleRecords(records) { /* ... 이전 코드 ... */
+             mesoSaleRecordTableBody.innerHTML = ''; if (!records || records.length === 0) { mesoSaleRecordTableBody.innerHTML = `<tr><td colspan="5" style="text-align:center;">아직 메소 판매 기록이 없습니다.</td></tr>`; return; } const formatNum = (num, digits = 0) => typeof num === 'number' ? num.toLocaleString(undefined, {maximumFractionDigits: digits}) : (num || '-'); const safeGet = (obj, path, defaultValue = '-') => { const value = path.split('.').reduce((o, k) => (o || {})[k], obj); return value !== undefined && value !== null ? value : defaultValue; }; records.forEach(record => { const row = mesoSaleRecordTableBody.insertRow(); row.insertCell().textContent = safeGet(record, 'id'); row.insertCell().textContent = safeGet(record, 'sale_date'); row.insertCell().textContent = formatNum(safeGet(record, 'price_per_1m_meso', 0)); const quantityInBillion = safeGet(record, 'quantity_sold_in_1m_units', 0) / 100.0; row.insertCell().textContent = formatNum(quantityInBillion, 2); row.insertCell().textContent = formatNum(safeGet(record, 'total_sale_amount_krw', 0)); row.cells[2].classList.add('number'); row.cells[3].classList.add('number'); row.cells[4].classList.add('number'); });
+         }
+
+    </script>
+</body>
+</html>

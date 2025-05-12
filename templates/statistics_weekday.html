@@ -1,0 +1,160 @@
+<!-- C:\pro\templates\statistics_weekday.html (네비게이션, 제목, 차트/테이블 내 용어 변경 및 간결화) -->
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>요일별 요약 - 메이플 수익 기록</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Annotation 플러그인 CDN은 제거된 상태 유지 -->
+    <style>
+        /* ... (기존 스타일 유지) ... */
+        .filter-section { margin-bottom: 20px; padding: 15px; background-color: #f9f9f9; border-radius: 5px; display: flex; align-items: center; flex-wrap: wrap; gap: 10px;}
+        .filter-section label { margin-right: 5px; }
+        .filter-section input[type="date"], .filter-section button { padding: 8px; border-radius: 3px; border: 1px solid #ccc; }
+        .filter-section button { background-color: #2196F3; color: white; cursor: pointer; }
+        .filter-section button:hover { background-color: #1976D2; }
+        .chart-container { width: 90%; max-width: 800px; margin: 30px auto; padding:10px; border: 1px solid #ddd; border-radius: 5px; background-color: #fff;}
+        .chart-container h3 {text-align: center; margin-top:0; margin-bottom:15px; color: #333;}
+        #weekdayChartDataSelect, input[name="chartType"] + label { padding: 5px; border-radius: 3px; border: 1px solid #ccc; margin-right: 5px; }
+        .summary-table-container { margin-top: 20px; }
+        .summary-table { width: 100%; border-collapse: collapse; }
+        .summary-table th, .summary-table td { border: 1px solid #ddd; padding: 8px 10px; text-align: right; font-size: 0.9em; }
+        .summary-table th:first-child, .summary-table td:first-child { text-align: left; }
+        .average-line-description { text-align: center; font-size: 0.9em; color: #555; margin-top: 8px; padding: 5px; background-color: #f8f8f8; border-radius: 4px;}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <nav>
+            <a href="{{ url_for('read_root_page_ui') }}">홈</a> |
+            <a href="{{ url_for('ui_list_and_add_meso_sales_page') }}">메소 판매</a> |
+            <a href="{{ url_for('ui_list_and_add_hunting_sessions_page') }}">사냥</a> |
+            <a href="{{ url_for('ui_list_and_add_jjul_sessions_page') }}">쩔</a> |
+            <a href="{{ url_for('ui_statistics_daily_page') }}">일별</a> |
+            <a href="{{ url_for('ui_statistics_map_page') }}">맵별</a> |
+            <strong>요일별</strong>
+        </nav>
+
+        <h1>요일별 요약</h1>
+
+        <div id="message-area-stats-weekday"><!-- 메시지 영역 --></div>
+        <!-- 기간 필터링 UI -->
+        <div class="filter-section">
+            <label for="weekdayStartDate">시작 날짜:</label><input type="date" id="weekdayStartDate"><label for="weekdayEndDate">종료 날짜:</label><input type="date" id="weekdayEndDate"><button id="viewWeekdaySummaryButton">조회</button><button id="resetWeekdayDateFilterButton" style="background-color: #757575;">전체 기간 조회</button>
+        </div>
+        <div class="chart-container">
+            <!-- 차트 데이터 선택 UI -->
+            <div style="text-align: center; margin-bottom: 15px;">
+                <label for="weekdayChartDataSelect" style="margin-right: 5px;">차트 데이터 선택:</label>
+                <select id="weekdayChartDataSelect">
+                    <option value="overall_net_profit" selected>전체 순수익</option>
+                    <option value="comparison">사냥/쩔 순수익 비교</option>
+                    <option value="total_hunting_net_profit">사냥 순수익 (단독)</option>
+                    <option value="total_jjul_net_profit">쩔 순수익 (단독)</option>
+                    <option value="total_sessions">총 기록 수</option> <!-- "세션" -> "기록" (또는 "타임") -->
+                </select>
+            </div>
+            <!-- 차트 종류 선택 UI -->
+            <div style="text-align: center; margin-bottom: 15px; margin-top: 10px;"><label style="margin-right: 10px;">차트 종류:</label><input type="radio" id="chartTypeBar" name="chartType" value="bar" checked style="margin-right: 3px;"><label for="chartTypeBar" style="margin-right: 10px;">막대</label><input type="radio" id="chartTypeLine" name="chartType" value="line" style="margin-right: 3px;"><label for="chartTypeLine">선</label></div>
+            <h3 id="weekdayChartTitle">요일별 전체 순수익</h3><canvas id="weekdayNetProfitChart"></canvas>
+            <p id="averageDescription" class="average-line-description" style="display: none;"></p>
+        </div>
+        <div class="summary-table-container">
+             <h3>요일별 상세 통계</h3>
+             <table id="weekdaySummaryTable" class="summary-table">
+                <thead>
+                    <tr>
+                        <th>요일</th>
+                        <th>총 기록 수</th> <!-- "세션" -> "기록" (또는 "타임") -->
+                        <th>사냥 총순수익</th>
+                        <th>쩔 총순수익</th>
+                        <th>전체 총순수익</th>
+                    </tr>
+                </thead>
+                <tbody id="weekdaySummaryTableBody"><tr><td colspan="5" style="text-align:center;">조회할 기간을 선택하거나 전체 기간 조회를 눌러주세요.</td></tr></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // DOM 요소, 전역 변수, 색상 정의 (이전과 동일)
+        const messageAreaStatsWeekday = document.getElementById('message-area-stats-weekday');
+        const weekdaySummaryTableBody = document.getElementById('weekdaySummaryTableBody');
+        const chartCanvas = document.getElementById('weekdayNetProfitChart');
+        const weekdayChartTitleEl = document.getElementById('weekdayChartTitle');
+        const weekdayChartDataSelect = document.getElementById('weekdayChartDataSelect');
+        const chartTypeRadios = document.querySelectorAll('input[name="chartType"]');
+        const averageDescriptionEl = document.getElementById('averageDescription');
+        const weekdayStartDateInput = document.getElementById('weekdayStartDate');
+        const weekdayEndDateInput = document.getElementById('weekdayEndDate');
+        const viewWeekdaySummaryButton = document.getElementById('viewWeekdaySummaryButton');
+        const resetWeekdayDateFilterButton = document.getElementById('resetWeekdayDateFilterButton');
+        let weekdayChartInstance = null;
+        let currentSummaryData = [];
+        const huntingColor = 'rgba(54, 162, 235, 0.7)'; const huntingBorderColor = 'rgba(54, 162, 235, 1)';
+        const jjulColor = 'rgba(255, 99, 132, 0.7)';   const jjulBorderColor = 'rgba(255, 99, 132, 1)';
+        const overallColor = 'rgba(75, 192, 192, 0.7)'; const overallBorderColor = 'rgba(75, 192, 192, 1)';
+        const sessionColor = 'rgba(153, 102, 255, 0.7)'; const sessionBorderColor = 'rgba(153, 102, 255, 1)';
+
+        // 이벤트 리스너 (이전과 동일)
+        document.addEventListener('DOMContentLoaded', () => { fetchWeekdaySummary(); });
+        viewWeekdaySummaryButton.addEventListener('click', () => { if (weekdayStartDateInput.value && weekdayEndDateInput.value) { fetchWeekdaySummary(weekdayStartDateInput.value, weekdayEndDateInput.value); } else { displayStatsWeekdayMessage('시작 날짜와 종료 날짜를 모두 선택해주세요.', 'warning'); } });
+        resetWeekdayDateFilterButton.addEventListener('click', () => { weekdayStartDateInput.value = ''; weekdayEndDateInput.value = ''; fetchWeekdaySummary(); });
+        weekdayChartDataSelect.addEventListener('change', () => { triggerChartUpdate(); });
+        chartTypeRadios.forEach(radio => { radio.addEventListener('change', () => { triggerChartUpdate(); }); });
+
+        function triggerChartUpdate() { const selectedDataType = weekdayChartDataSelect.value; const selectedChartType = document.querySelector('input[name="chartType"]:checked').value; if (currentSummaryData.length > 0) { updateWeekdayChart(currentSummaryData, selectedDataType, selectedChartType, weekdayStartDateInput.value, weekdayEndDateInput.value); } }
+
+        async function fetchWeekdaySummary(startDate, endDate) { /* ... (fetch 로직 동일) ... */
+            displayStatsWeekdayMessage('데이터를 불러오는 중...', 'info'); weekdaySummaryTableBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">데이터를 불러오는 중...</td></tr>'; if (weekdayChartInstance) { weekdayChartInstance.destroy(); weekdayChartInstance = null; } currentSummaryData = []; averageDescriptionEl.style.display = 'none'; let apiUrl = '/statistics/weekday-summary'; const params = new URLSearchParams(); if (startDate && endDate) { params.append('start_date', startDate); params.append('end_date', endDate); } if (params.toString()) { apiUrl += `?${params.toString()}`; }
+            try { const response = await fetch(apiUrl); if (!response.ok) { const errorData = await response.json().catch(() => null); let errorMessage = `통계 조회 실패 (상태 코드: ${response.status})`; if (errorData && errorData.detail) { errorMessage += (typeof errorData.detail === 'string') ? (": " + errorData.detail) : (": " + JSON.stringify(errorData.detail)); } displayStatsWeekdayMessage(errorMessage, 'error'); weekdaySummaryTableBody.innerHTML = `<tr><td colspan="5" style="text-align:center;">${errorMessage}</td></tr>`; return; }
+                const data = await response.json(); currentSummaryData = data.summary_items; let successMessage = '요일별 통계 조회가 완료되었습니다.'; if (startDate && endDate) { successMessage = `${startDate} ~ ${endDate} 기간의 ${successMessage}`; } else { successMessage = `전체 기간 ${successMessage}`; } displayStatsWeekdayMessage(successMessage, 'success'); renderWeekdaySummaryTable(currentSummaryData); triggerChartUpdate();
+            } catch (error) { console.error('Error fetching weekday summary:', error); displayStatsWeekdayMessage('통계 조회 중 오류가 발생했습니다. 네트워크를 확인해주세요.', 'error'); weekdaySummaryTableBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">통계 조회 중 오류 발생</td></tr>'; }
+        }
+
+        function renderWeekdaySummaryTable(summaryItems) {
+             weekdaySummaryTableBody.innerHTML = ''; if (!summaryItems || summaryItems.length === 0) { weekdaySummaryTableBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">요약할 데이터가 없습니다.</td></tr>'; return; }
+             summaryItems.forEach(item => {
+                const row = weekdaySummaryTableBody.insertRow();
+                row.insertCell().textContent = item.weekday_name;
+                row.insertCell().textContent = item.total_sessions.toLocaleString('ko-KR'); // total_sessions 스키마 필드명 유지
+                row.insertCell().textContent = item.total_hunting_net_profit.toLocaleString('ko-KR');
+                row.insertCell().textContent = item.total_jjul_net_profit.toLocaleString('ko-KR');
+                row.insertCell().textContent = item.overall_net_profit.toLocaleString('ko-KR');
+             });
+        }
+
+        // 차트 업데이트 함수 (차트 라벨 및 Y축 단위 텍스트 변경)
+        function updateWeekdayChart(summaryItems, dataType, chartType, startDate, endDate) {
+            if (!weekdayChartTitleEl || !chartCanvas || !averageDescriptionEl) return;
+
+            let chartTitle = ''; let datasets = []; let yAxisLabelSuffix = ' 메소'; let dataValuesForAverage = [];
+            const labels = summaryItems.map(item => item.weekday_name);
+
+            switch (dataType) {
+                case 'comparison': chartTitle = '요일별 사냥/쩔 순수익 비교'; const huntingData = summaryItems.map(item => item.total_hunting_net_profit); const jjulData = summaryItems.map(item => item.total_jjul_net_profit); datasets = [ { label: '사냥 순수익', data: huntingData, backgroundColor: huntingColor, borderColor: huntingBorderColor, borderWidth: chartType === 'bar' ? 1 : 2, fill: chartType === 'line' ? false : undefined, tension: chartType === 'line' ? 0.1 : undefined }, { label: '쩔 순수익', data: jjulData, backgroundColor: jjulColor, borderColor: jjulBorderColor, borderWidth: chartType === 'bar' ? 1 : 2, fill: chartType === 'line' ? false : undefined, tension: chartType === 'line' ? 0.1 : undefined } ]; dataValuesForAverage = summaryItems.map(item => item.overall_net_profit); yAxisLabelSuffix = ' 메소'; break;
+                case 'total_hunting_net_profit': chartTitle = '요일별 사냥 순수익'; dataValuesForAverage = summaryItems.map(item => item.total_hunting_net_profit); datasets = [{ label: '사냥 순수익', data: dataValuesForAverage, backgroundColor: huntingColor, borderColor: huntingBorderColor, borderWidth: chartType === 'bar' ? 1 : 2, fill: chartType === 'line' ? false : undefined, tension: chartType === 'line' ? 0.1 : undefined }]; yAxisLabelSuffix = ' 메소'; break;
+                case 'total_jjul_net_profit': chartTitle = '요일별 쩔 순수익'; dataValuesForAverage = summaryItems.map(item => item.total_jjul_net_profit); datasets = [{ label: '쩔 순수익', data: dataValuesForAverage, backgroundColor: jjulColor, borderColor: jjulBorderColor, borderWidth: chartType === 'bar' ? 1 : 2, fill: chartType === 'line' ? false : undefined, tension: chartType === 'line' ? 0.1 : undefined }]; yAxisLabelSuffix = ' 메소'; break;
+                case 'total_sessions': chartTitle = '요일별 총 기록 수'; dataValuesForAverage = summaryItems.map(item => item.total_sessions); datasets = [{ label: '총 기록 수', data: dataValuesForAverage, backgroundColor: sessionColor, borderColor: sessionBorderColor, borderWidth: chartType === 'bar' ? 1 : 2, fill: chartType === 'line' ? false : undefined, tension: chartType === 'line' ? 0.1 : undefined }]; yAxisLabelSuffix = ' 회'; break; /* "세션" -> "기록" */
+                case 'overall_net_profit': default: chartTitle = '요일별 전체 순수익'; dataValuesForAverage = summaryItems.map(item => item.overall_net_profit); datasets = [{ label: '전체 순수익', data: dataValuesForAverage, backgroundColor: overallColor, borderColor: overallBorderColor, borderWidth: chartType === 'bar' ? 1 : 2, fill: chartType === 'line' ? false : undefined, tension: chartType === 'line' ? 0.1 : undefined }]; yAxisLabelSuffix = ' 메소'; break;
+            }
+            const averageValue = dataValuesForAverage.length > 0 ? dataValuesForAverage.reduce((sum, value) => sum + value, 0) / dataValuesForAverage.length : 0;
+            let chartTitlePrefix = (startDate && endDate) ? `${startDate} ~ ${endDate}` : '전체 기간';
+            weekdayChartTitleEl.textContent = `${chartTitlePrefix} ${chartTitle}`;
+
+            if (dataValuesForAverage.length > 0 && (dataType !== 'comparison')) {
+                averageDescriptionEl.textContent = `선택된 데이터의 평균: ${averageValue.toLocaleString('ko-KR', { maximumFractionDigits: (yAxisLabelSuffix === ' 회' ? 1 : 0) })}${yAxisLabelSuffix}`; /* "평균값" -> "평균" */
+                averageDescriptionEl.style.display = 'block';
+            } else { averageDescriptionEl.style.display = 'none'; }
+
+            const chartConfig = { type: chartType, data: { labels: labels, datasets: datasets }, options: { responsive: true, maintainAspectRatio: true, scales: { y: { beginAtZero: true, ticks: { callback: value => value.toLocaleString('ko-KR') + yAxisLabelSuffix } } }, plugins: { tooltip: { callbacks: { label: context => { let label = context.dataset.label || ''; if (label) { label += ': '; } if (context.parsed.y !== null) { label += context.parsed.y.toLocaleString('ko-KR') + yAxisLabelSuffix; } return label; }}}} } };
+
+            if (weekdayChartInstance) { if (weekdayChartInstance.config.type !== chartType || weekdayChartInstance.data.datasets.length !== datasets.length) { weekdayChartInstance.destroy(); if (!summaryItems || summaryItems.length === 0) { if(chartCanvas.getContext('2d')) { chartCanvas.getContext('2d').clearRect(0, 0, chartCanvas.width, chartCanvas.height); } weekdayChartInstance = null; return; } weekdayChartInstance = new Chart(chartCanvas, chartConfig); } else { weekdayChartInstance.data = chartConfig.data; weekdayChartInstance.options = chartConfig.options; weekdayChartInstance.update(); } } else { if (!summaryItems || summaryItems.length === 0) { if(chartCanvas.getContext('2d')) { chartCanvas.getContext('2d').clearRect(0, 0, chartCanvas.width, chartCanvas.height); } return; } weekdayChartInstance = new Chart(chartCanvas, chartConfig); }
+        }
+
+        function displayStatsWeekdayMessage(message, type) { /* ... (메시지 표시 동일) ... */ if (!messageAreaStatsWeekday) return; const messageDiv = document.createElement('div'); messageDiv.className = `message ${type}`; messageDiv.textContent = message; messageAreaStatsWeekday.innerHTML = ''; messageAreaStatsWeekday.appendChild(messageDiv); setTimeout(() => { if (messageDiv.parentNode === messageAreaStatsWeekday) { messageAreaStatsWeekday.removeChild(messageDiv); } }, 5000); }
+    </script>
+</body>
+</html>

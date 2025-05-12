@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>통계 - 일별 요약</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <!-- Flatpickr CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <style>
+        /* 통계 페이지 스타일링 (선택적) */
+        .summary-card {
+            background-color: #f8f9fa; /* 밝은 배경색 */
+            border: 1px solid #dee2e6;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 0.25rem;
+        }
+        .summary-card h5 {
+            margin-bottom: 0.75rem;
+            color: #495057; /* 약간 어두운 제목 색상 */
+        }
+        .summary-card p {
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+        .summary-card strong {
+            color: #0d6efd; /* 강조 색상 (파란색) */
+        }
+        .text-danger { /* 순수익 음수일 때 */
+             color: #dc3545 !important;
+        }
+        .text-success { /* 순수익 양수일 때 */
+             color: #198754 !important;
+        }
+        th { /* 테이블 헤더 */
+            background-color: #e9ecef; /* 약간 밝은 회색 배경 */
+            text-align: center;
+            vertical-align: middle;
+        }
+        td { /* 테이블 데이터 */
+            text-align: right;
+            vertical-align: middle;
+        }
+        td:first-child { /* 첫 번째 열 (날짜) */
+             text-align: center;
+        }
+        /* 로딩 스피너 스타일 (선택적) */
+        .spinner-border-sm {
+             width: 1rem;
+             height: 1rem;
+             border-width: .2em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <h1>📊 통계 분석</h1>
+        <ul class="nav nav-tabs mt-3">
+            <li class="nav-item">
+                <a class="nav-link active" aria-current="page" href="/statistics/daily">일별 요약</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/statistics/map">맵별 통계</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/statistics/weekday">요일별 통계</a>
+            </li>
+            <!-- 다른 통계 페이지 링크 추가 가능 -->
+        </ul>
+
+        <div class="my-4">
+            <h2>📅 일별 요약 조회</h2>
+            <div class="row g-3 align-items-center">
+                <div class="col-auto">
+                    <label for="startDate" class="col-form-label">조회 시작일:</label>
+                </div>
+                <div class="col-auto">
+                    <input type="text" id="startDate" class="form-control flatpickr-input" placeholder="YYYY-MM-DD">
+                </div>
+                <div class="col-auto">
+                    <label for="endDate" class="col-form-label">조회 종료일:</label>
+                </div>
+                <div class="col-auto">
+                    <input type="text" id="endDate" class="form-control flatpickr-input" placeholder="YYYY-MM-DD">
+                </div>
+                <div class="col-auto">
+                    <button id="fetchDataBtn" class="btn btn-primary">조회</button>
+                </div>
+            </div>
+             <div id="loadingIndicator" class="mt-3" style="display: none;">
+                 <div class="spinner-border spinner-border-sm text-primary" role="status">
+                     <span class="visually-hidden">Loading...</span>
+                 </div>
+                 <span class="ms-2">데이터를 조회하는 중입니다...</span>
+             </div>
+             <div id="error-message" class="alert alert-danger mt-3" style="display: none;"></div>
+        </div>
+
+        <!-- 수익 통계 테이블 -->
+        <div class="mt-4">
+            <h2>💰 일별 수익 요약</h2>
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>날짜</th>
+                            <th>사냥 메소</th>
+                            <th>쩔 수익</th>
+                            <th>고가템 수익</th>
+                            <th>일반템 수익</th>
+                            <th>소모템 획득</th>
+                            <th>소모템 비용</th>
+                            <th>지참비</th>
+                            <th>총 수익</th>
+                            <th>순수익</th>
+                            <th>현금화 금액(원)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="daily-summary-table-body">
+                        <tr>
+                            <td colspan="11" class="text-center">기간을 선택하고 '조회' 버튼을 클릭하세요.</td>
+                        </tr>
+                    </tbody>
+                    <tfoot id="daily-summary-table-footer" style="font-weight: bold;">
+                        <!-- 여기에 총계 표시 -->
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        <!-- ========================= -->
+        <!-- ⭐ 경험치 통계 테이블 추가 ⭐ -->
+        <!-- ========================= -->
+        <div class="mt-5">
+            <h2>✨ 일별 경험치 요약 (사냥 타임 기준)</h2>
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>날짜</th>
+                            <th>타임 수</th>
+                            <th>총 사냥 시간</th>
+                            <th>총 획득 경험치</th>
+                            <th>총 원경험치</th>
+                            <th>시간당 평균 경험치</th>
+                            <th>시간당 평균 원경험치</th>
+                        </tr>
+                    </thead>
+                    <tbody id="experience-summary-table-body">
+                        <tr>
+                            <td colspan="7" class="text-center">기간을 선택하고 '조회' 버튼을 클릭하세요.</td>
+                        </tr>
+                    </tbody>
+                    <tfoot id="experience-summary-table-footer" style="font-weight: bold;">
+                        <!-- 여기에 총계 표시 (선택적) -->
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+
+        <div class="text-center my-4">
+            <a href="/" class="btn btn-secondary">메인 화면으로 돌아가기</a>
+        </div>
+
+    </div> <!-- container end -->
+
+    <!-- Bootstrap JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Flatpickr JS -->
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ko.js"></script> <!-- 한국어 지원 -->
+
+    <script>
+        // Flatpickr 초기화
+        flatpickr(".flatpickr-input", {
+            dateFormat: "Y-m-d",
+            locale: "ko", // 한국어 설정
+            defaultDate: "today" // 기본값 오늘 날짜
+        });
+
+        const fetchDataBtn = document.getElementById('fetchDataBtn');
+        const startDateInput = document.getElementById('startDate');
+        const endDateInput = document.getElementById('endDate');
+        const dailySummaryTableBody = document.getElementById('daily-summary-table-body');
+        const dailySummaryTableFooter = document.getElementById('daily-summary-table-footer');
+        // ⭐ 경험치 테이블 요소 추가
+        const experienceSummaryTableBody = document.getElementById('experience-summary-table-body');
+        const experienceSummaryTableFooter = document.getElementById('experience-summary-table-footer');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const errorMessageDiv = document.getElementById('error-message');
+
+        // 숫자 콤마 포맷팅 함수
+        function formatNumber(num) {
+            if (num === null || num === undefined) return '0';
+            // 음수일 경우 처리 추가
+            const prefix = num < 0 ? '-' : '';
+            const absNum = Math.abs(num);
+            // toLocaleString()을 사용하여 천 단위 콤마 추가
+            return prefix + absNum.toLocaleString();
+        }
+
+        // ⭐ 시간 포맷팅 함수 (분 -> X시간 Y분)
+        function formatDuration(totalMinutes) {
+            if (totalMinutes === null || totalMinutes === undefined || totalMinutes <= 0) {
+                return "0분";
+            }
+            const hours = Math.floor(totalMinutes / 60);
+            const minutes = totalMinutes % 60;
+            let result = "";
+            if (hours > 0) {
+                result += `${hours}시간 `;
+            }
+            // 시간이 0시간이거나 분이 있을 때만 분 표시
+            if (minutes > 0 || hours === 0) {
+                result += `${minutes}분`;
+            }
+            return result.trim(); // 양 끝 공백 제거
+        }
+
+
+        // 일별 수익 요약 데이터 가져오기 및 테이블 업데이트 함수
+        async function fetchDailySummary(startDate, endDate) {
+            dailySummaryTableBody.innerHTML = '<tr><td colspan="11" class="text-center">수익 데이터를 불러오는 중...</td></tr>';
+            dailySummaryTableFooter.innerHTML = ''; // 푸터 초기화
+
+            try {
+                const response = await fetch(`/api/statistics/summary/daily?start_date=${startDate}&end_date=${endDate}`);
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json(); // DailySummaryResponse
+
+                dailySummaryTableBody.innerHTML = ''; // 테이블 내용 비우기
+
+                if (data.summaries && data.summaries.length > 0) {
+                    let totals = { hunting_meso: 0, jjul_profit: 0, rare_item_profit: 0, normal_item_profit: 0, consumable_gained_profit: 0, consumable_cost: 0, entry_fee: 0, total_profit: 0, net_profit: 0, cash_sold_krw: 0 };
+
+                    data.summaries.forEach(item => {
+                        const row = dailySummaryTableBody.insertRow();
+                        const netProfitClass = item.net_profit < 0 ? 'text-danger' : 'text-success'; // 순수익 색상 클래스
+
+                        row.insertCell().textContent = item.date;
+                        row.insertCell().textContent = formatNumber(item.hunting_meso);
+                        row.insertCell().textContent = formatNumber(item.jjul_profit);
+                        row.insertCell().textContent = formatNumber(item.rare_item_profit);
+                        row.insertCell().textContent = formatNumber(item.normal_item_profit);
+                        row.insertCell().textContent = formatNumber(item.consumable_gained_profit);
+                        row.insertCell().textContent = formatNumber(item.consumable_cost);
+                        row.insertCell().textContent = formatNumber(item.entry_fee);
+                        row.insertCell().textContent = formatNumber(item.total_profit);
+                        row.insertCell().innerHTML = `<span class="${netProfitClass}">${formatNumber(item.net_profit)}</span>`; // 순수익에 클래스 적용
+                        row.insertCell().textContent = formatNumber(item.cash_sold_krw);
+
+                        // 합계 계산
+                        totals.hunting_meso += item.hunting_meso;
+                        totals.jjul_profit += item.jjul_profit;
+                        totals.rare_item_profit += item.rare_item_profit;
+                        totals.normal_item_profit += item.normal_item_profit;
+                        totals.consumable_gained_profit += item.consumable_gained_profit;
+                        totals.consumable_cost += item.consumable_cost;
+                        totals.entry_fee += item.entry_fee;
+                        totals.total_profit += item.total_profit;
+                        totals.net_profit += item.net_profit;
+                        totals.cash_sold_krw += item.cash_sold_krw;
+                    });
+
+                    // 푸터에 총계 표시
+                    const footerRow = dailySummaryTableFooter.insertRow();
+                    const netProfitTotalClass = totals.net_profit < 0 ? 'text-danger' : 'text-success';
+                    footerRow.insertCell().textContent = '총계';
+                    footerRow.insertCell().textContent = formatNumber(totals.hunting_meso);
+                    footerRow.insertCell().textContent = formatNumber(totals.jjul_profit);
+                    footerRow.insertCell().textContent = formatNumber(totals.rare_item_profit);
+                    footerRow.insertCell().textContent = formatNumber(totals.normal_item_profit);
+                    footerRow.insertCell().textContent = formatNumber(totals.consumable_gained_profit);
+                    footerRow.insertCell().textContent = formatNumber(totals.consumable_cost);
+                    footerRow.insertCell().textContent = formatNumber(totals.entry_fee);
+                    footerRow.insertCell().textContent = formatNumber(totals.total_profit);
+                    footerRow.insertCell().innerHTML = `<span class="${netProfitTotalClass}">${formatNumber(totals.net_profit)}</span>`;
+                    footerRow.insertCell().textContent = formatNumber(totals.cash_sold_krw);
+
+                } else {
+                    dailySummaryTableBody.innerHTML = '<tr><td colspan="11" class="text-center">해당 기간에 조회된 수익 데이터가 없습니다.</td></tr>';
+                }
+
+            } catch (error) {
+                console.error('Error fetching daily summary:', error);
+                dailySummaryTableBody.innerHTML = `<tr><td colspan="11" class="text-center text-danger">수익 데이터 조회 중 오류 발생: ${error.message}</td></tr>`;
+                throw error; // 에러를 다시 던져서 fetchData에서 잡도록 함
+            }
+        }
+
+        // ⭐ 일별 경험치 요약 데이터 가져오기 및 테이블 업데이트 함수
+        async function fetchDailyExperienceSummary(startDate, endDate) {
+            experienceSummaryTableBody.innerHTML = '<tr><td colspan="7" class="text-center">경험치 데이터를 불러오는 중...</td></tr>';
+            experienceSummaryTableFooter.innerHTML = ''; // 푸터 초기화
+
+            try {
+                const response = await fetch(`/api/statistics/experience/daily?start_date=${startDate}&end_date=${endDate}`);
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json(); // DailyExperienceSummaryResponse
+
+                experienceSummaryTableBody.innerHTML = ''; // 테이블 내용 비우기
+
+                if (data.summaries && data.summaries.length > 0) {
+                    // 필요시 총계 계산 변수 선언
+                    let expTotals = { session_count: 0, duration: 0, exp_profit: 0, base_exp_profit: 0 };
+
+                    data.summaries.forEach(item => {
+                        const row = experienceSummaryTableBody.insertRow();
+                        row.insertCell().textContent = item.date;
+                        row.insertCell().textContent = item.total_session_count;
+                        row.insertCell().textContent = formatDuration(item.total_duration_minutes); // 시간 포맷팅 함수 사용
+                        row.insertCell().textContent = formatNumber(item.total_experience_profit);
+                        row.insertCell().textContent = formatNumber(item.total_base_experience_profit);
+                        // 시간당 평균 경험치는 소수점 2자리까지 표시 (toLocaleString 활용)
+                        row.insertCell().textContent = item.average_experience_per_hour.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+                        row.insertCell().textContent = item.average_base_experience_per_hour.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+
+                        // 총계 계산 (선택적)
+                        expTotals.session_count += item.total_session_count;
+                        expTotals.duration += item.total_duration_minutes;
+                        expTotals.exp_profit += item.total_experience_profit;
+                        expTotals.base_exp_profit += item.total_base_experience_profit;
+                    });
+
+                    // 푸터에 총계 표시 (선택적)
+                    const expFooterRow = experienceSummaryTableFooter.insertRow();
+                    expFooterRow.insertCell().textContent = '총계';
+                    expFooterRow.insertCell().textContent = expTotals.session_count;
+                    expFooterRow.insertCell().textContent = formatDuration(expTotals.duration);
+                    expFooterRow.insertCell().textContent = formatNumber(expTotals.exp_profit);
+                    expFooterRow.insertCell().textContent = formatNumber(expTotals.base_exp_profit);
+                    // 전체 기간 평균 시간당 경험치 계산 및 표시 (0 나누기 방지)
+                    let avgExpTotal = 0;
+                    let avgBaseExpTotal = 0;
+                    if (expTotals.duration > 0) {
+                        const totalHours = expTotals.duration / 60.0;
+                        avgExpTotal = expTotals.exp_profit / totalHours;
+                        avgBaseExpTotal = expTotals.base_exp_profit / totalHours;
+                    }
+                    expFooterRow.insertCell().textContent = avgExpTotal.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+                    expFooterRow.insertCell().textContent = avgBaseExpTotal.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+
+
+                } else {
+                    experienceSummaryTableBody.innerHTML = '<tr><td colspan="7" class="text-center">해당 기간에 조회된 경험치 데이터가 없습니다.</td></tr>';
+                }
+            } catch (error) {
+                console.error('Error fetching daily experience summary:', error);
+                experienceSummaryTableBody.innerHTML = `<tr><td colspan="7" class="text-center text-danger">경험치 데이터 조회 중 오류 발생: ${error.message}</td></tr>`;
+                throw error; // 에러를 다시 던져서 fetchData에서 잡도록 함
+            }
+        }
+
+
+        // 조회 버튼 클릭 이벤트 리스너
+        fetchDataBtn.addEventListener('click', async () => {
+            const startDate = startDateInput.value;
+            const endDate = endDateInput.value;
+            errorMessageDiv.style.display = 'none'; // 이전 오류 메시지 숨김
+            errorMessageDiv.textContent = '';
+
+            if (!startDate || !endDate) {
+                errorMessageDiv.textContent = '시작일과 종료일을 모두 선택해주세요.';
+                errorMessageDiv.style.display = 'block';
+                return;
+            }
+
+            if (startDate > endDate) {
+                errorMessageDiv.textContent = '시작일은 종료일보다 이전이어야 합니다.';
+                errorMessageDiv.style.display = 'block';
+                return;
+            }
+
+            loadingIndicator.style.display = 'block'; // 로딩 표시 보이기
+            fetchDataBtn.disabled = true; // 버튼 비활성화
+
+            try {
+                // 수익 요약과 경험치 요약을 동시에(병렬로) 요청
+                await Promise.all([
+                    fetchDailySummary(startDate, endDate),
+                    fetchDailyExperienceSummary(startDate, endDate) // 경험치 요약 함수 호출 추가
+                ]);
+            } catch (error) {
+                // 개별 fetch 함수 내에서 오류 메시지를 표시하므로 여기서는 콘솔 로그만 남김
+                console.error("데이터 조회 중 전역 오류 발생:", error);
+                 // 또는 추가적인 전역 오류 처리
+                 errorMessageDiv.textContent = `데이터 조회 중 오류가 발생했습니다: ${error.message}`;
+                 errorMessageDiv.style.display = 'block';
+            } finally {
+                loadingIndicator.style.display = 'none'; // 로딩 표시 숨기기
+                fetchDataBtn.disabled = false; // 버튼 다시 활성화
+            }
+        });
+
+        // 페이지 로드 시 초기 데이터 로드 (선택적 - 기본적으로는 조회 버튼 클릭 시 로드)
+        // document.addEventListener('DOMContentLoaded', () => {
+        //      fetchDataBtn.click(); // 페이지 로드 시 오늘 날짜 기준으로 자동 조회
+        // });
+
+    </script>
+
+</body>
+</html>
