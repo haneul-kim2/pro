@@ -1,72 +1,69 @@
-<!-- C:\pro\templates\home.html (네비게이션 간결화) -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>메이플 수익 기록 웹앱</title>
+    <title>메이플 수익 기록 - 홈</title>
     <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}">
     <style>
-        body { font-family: '맑은 고딕', 'Malgun Gothic', sans-serif; line-height: 1.6; margin: 0; padding: 0; background-color: #f4f4f4; color: #333; }
-        .container { max-width: 960px; margin: 20px auto; padding: 20px; background-color: #fff; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-        header h1 { color: #337ab7; text-align: center; margin-bottom: 20px; }
-        nav ul { list-style-type: none; padding: 0; text-align: center; margin-bottom: 30px; }
-        nav ul li { display: inline; margin-right: 15px; }
-        nav ul li a { text-decoration: none; color: #337ab7; font-weight: bold; padding: 8px 12px; border-radius: 4px; transition: background-color 0.3s ease; }
-        nav ul li a:hover, nav ul li a.active { background-color: #337ab7; color: white; }
-        
-        .content-section { margin-bottom: 30px; padding: 20px; border: 1px solid #eee; border-radius: 5px; }
-        .content-section h2 { color: #5cb85c; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-top: 0; }
-        .content-section p { margin-bottom: 10px; }
-        .api-docs-links { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; }
-        .api-docs-links a { margin: 0 10px; }
+        /* 스타일은 이전 답변과 동일하게 유지 (필요시 style.css로 이동) */
+        body { font-family: 'Arial', sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; color: #333; display: flex; flex-direction: column; min-height: 100vh; }
+        header { background: #333; color: #fff; padding: 1rem 0; text-align: center; }
+        header h1 { margin: 0; font-size: 1.8rem; }
+        nav { background: #444; padding: 0.5rem 0; }
+        nav ul { padding: 0; list-style: none; text-align: center; margin: 0; }
+        nav ul li { display: inline-block; margin: 0 5px; }
+        nav ul li a { text-decoration: none; color: #fff; padding: 10px 15px; display: inline-block; border-radius: 4px; transition: background-color 0.3s ease; }
+        nav ul li a:hover, nav ul li a.active { background-color: #555; }
+        main.container { flex-grow: 1; width: 90%; max-width: 1200px; margin: 20px auto; padding: 20px; background-color: #fff; box-shadow: 0 0 10px rgba(0,0,0,0.1); border-radius: 8px; }
+        footer { background: #333; color: #fff; text-align: center; padding: 1rem 0; margin-top: auto; width: 100%; }
+        nav ul li.dropdown { position: relative; display: inline-block; }
+        nav ul li.dropdown .dropbtn { cursor: default; }
+        nav ul li.dropdown .dropdown-content { display: none; position: absolute; background-color: #444; min-width: 120px; box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2); z-index: 1; left: 0; border-radius: 0 0 4px 4px; overflow: hidden; }
+        nav ul li.dropdown .dropdown-content a { color: white; padding: 10px 15px; text-decoration: none; display: block; text-align: left; white-space: nowrap; }
+        nav ul li.dropdown .dropdown-content a:hover { background-color: #555; }
+        nav ul li.dropdown:hover .dropdown-content { display: block; }
+        .content { padding: 20px; text-align: center; }
+        .content h2 { color: #333; margin-bottom: 15px; }
+        .content p { font-size: 1.1rem; line-height: 1.6; margin-bottom: 10px; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>{{ page_title }}</h1>
-        </header>
+    <header>
+        <h1>메이플스토리 수익 기록 웹</h1>
+    </header>
 
-        <nav>
-            <ul>
-                <li><a href="{{ url_for('read_root_page_ui') }}" class="active">홈</a></li>
-                <li><a href="{{ url_for('ui_list_and_add_meso_sales_page') }}">메소 판매</a></li>
-                <li><a href="{{ url_for('ui_list_and_add_hunting_sessions_page') }}">사냥</a></li>
-                <li><a href="{{ url_for('ui_list_and_add_jjul_sessions_page') }}">쩔</a></li>
-                <li><a href="{{ url_for('ui_statistics_daily_page') }}">일별</a></li>
-                <li><a href="{{ url_for('ui_statistics_map_page') }}">맵별</a></li>
-                <li><a href="{{ url_for('ui_statistics_weekday_page') }}">요일별</a></li>
-            </ul>
-        </nav>
+    <!-- 네비게이션 바 - '타임' 텍스트 제거 -->
+    <nav>
+        <ul>
+            <li><a href="{{ url_for('read_home') }}" class="active">홈</a></li>
+            <li><a href="{{ url_for('meso_sales_page') }}">메소 판매</a></li>
+            <li><a href="{{ url_for('hunting_times_page') }}">사냥</a></li> <!-- ' 타임' 제거 -->
+            <li><a href="{{ url_for('jjul_times_page') }}">쩔</a></li>   <!-- ' 타임' 제거 -->
+            <li class="dropdown">
+                <a href="javascript:void(0)" class="dropbtn">통계</a>
+                <div class="dropdown-content">
+                    <a href="{{ url_for('statistics_daily_page') }}">일별 요약</a>
+                    <a href="{{ url_for('statistics_map_page') }}">맵별 요약</a>
+                    <a href="{{ url_for('statistics_weekday_page') }}">요일별 요약</a>
+                </div>
+            </li>
+        </ul>
+    </nav>
+    <!-- 네비게이션 바 끝 -->
 
-        <section class="content-section">
-            <h2>프로그램 소개</h2>
-            <p>이 웹 애플리케이션은 메이플스토리 게임 내에서의 수익 활동(메소 판매, 사냥, 쩔)을 기록하고, 다양한 통계를 통해 분석할 수 있도록 돕는 도구입니다.</p>
-            <p>기존 Tkinter 기반의 프로그램을 웹 환경으로 이전하여 사용 편의성과 접근성을 높였습니다.</p>
-        </section>
-
-        <section class="content-section">
-            <h2>주요 기능</h2>
-            <ul>
-                <li>메소 판매 내역 기록 및 조회</li>
-                <li>사냥 활동(획득 메소, 경험치, 아이템 등) 기록 및 조회</li>
-                <li>쩔 활동(수익, 아이템 등) 기록 및 조회</li>
-                <li>일별, 맵별, 요일별 수익 및 활동 통계 시각화</li>
-            </ul>
-        </section>
-        
-        {% if docs_url or redoc_url %}
-        <div class="api-docs-links">
-            <p>개발자용 API 문서:</p>
-            {% if docs_url %}
-            <a href="{{ docs_url }}" target="_blank">Swagger UI</a>
-            {% endif %}
-            {% if redoc_url %}
-            <a href="{{ redoc_url }}" target="_blank">ReDoc</a>
-            {% endif %}
+    <main class="container">
+        <div class="content">
+            <h2>환영합니다!</h2>
+            <p>메이플스토리 수익 기록 웹 프로그램입니다.</p>
+            <p>상단 메뉴를 통해 원하는 기능을 선택하여 기록을 시작하거나 통계를 확인하세요.</p>
+            <p><em>열심히 개발 중입니다! 🚀</em></p>
         </div>
-        {% endif %}
-    </div>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 의문의돌맹이. All rights reserved.</p>
+    </footer>
+
 </body>
 </html>

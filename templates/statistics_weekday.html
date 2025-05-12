@@ -1,160 +1,255 @@
-<!-- C:\pro\templates\statistics_weekday.html (네비게이션, 제목, 차트/테이블 내 용어 변경 및 간결화) -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>요일별 요약 - 메이플 수익 기록</title>
+    <title>요일별 요약 통계</title>
     <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Annotation 플러그인 CDN은 제거된 상태 유지 -->
     <style>
-        /* ... (기존 스타일 유지) ... */
-        .filter-section { margin-bottom: 20px; padding: 15px; background-color: #f9f9f9; border-radius: 5px; display: flex; align-items: center; flex-wrap: wrap; gap: 10px;}
-        .filter-section label { margin-right: 5px; }
-        .filter-section input[type="date"], .filter-section button { padding: 8px; border-radius: 3px; border: 1px solid #ccc; }
-        .filter-section button { background-color: #2196F3; color: white; cursor: pointer; }
-        .filter-section button:hover { background-color: #1976D2; }
-        .chart-container { width: 90%; max-width: 800px; margin: 30px auto; padding:10px; border: 1px solid #ddd; border-radius: 5px; background-color: #fff;}
-        .chart-container h3 {text-align: center; margin-top:0; margin-bottom:15px; color: #333;}
-        #weekdayChartDataSelect, input[name="chartType"] + label { padding: 5px; border-radius: 3px; border: 1px solid #ccc; margin-right: 5px; }
-        .summary-table-container { margin-top: 20px; }
-        .summary-table { width: 100%; border-collapse: collapse; }
-        .summary-table th, .summary-table td { border: 1px solid #ddd; padding: 8px 10px; text-align: right; font-size: 0.9em; }
-        .summary-table th:first-child, .summary-table td:first-child { text-align: left; }
-        .average-line-description { text-align: center; font-size: 0.9em; color: #555; margin-top: 8px; padding: 5px; background-color: #f8f8f8; border-radius: 4px;}
+        /* 스타일은 이전 답변과 동일하게 유지 (필요시 style.css로 이동) */
+        body { font-family: 'Arial', sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; color: #333; display: flex; flex-direction: column; min-height: 100vh; }
+        header { background: #333; color: #fff; padding: 1rem 0; text-align: center; }
+        header h1 { margin: 0; font-size: 1.8rem; }
+        nav { background: #444; padding: 0.5rem 0; }
+        nav ul { padding: 0; list-style: none; text-align: center; margin: 0; }
+        nav ul li { display: inline-block; margin: 0 5px; }
+        nav ul li a { text-decoration: none; color: #fff; padding: 10px 15px; display: inline-block; border-radius: 4px; transition: background-color 0.3s ease; }
+        nav ul li a:hover, nav ul li a.active { background-color: #555; }
+        main.container { flex-grow: 1; width: 90%; max-width: 1200px; margin: 20px auto; padding: 20px; background-color: #fff; box-shadow: 0 0 10px rgba(0,0,0,0.1); border-radius: 8px; }
+        footer { background: #333; color: #fff; text-align: center; padding: 1rem 0; margin-top: auto; width: 100%; }
+        nav ul li.dropdown { position: relative; display: inline-block; }
+        nav ul li.dropdown .dropbtn { cursor: default; }
+        nav ul li.dropdown .dropdown-content { display: none; position: absolute; background-color: #444; min-width: 120px; box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2); z-index: 1; left: 0; border-radius: 0 0 4px 4px; overflow: hidden; }
+        nav ul li.dropdown .dropdown-content a { color: white; padding: 10px 15px; text-decoration: none; display: block; text-align: left; white-space: nowrap; }
+        nav ul li.dropdown .dropdown-content a:hover { background-color: #555; }
+        nav ul li.dropdown:hover .dropdown-content { display: block; }
+        h2 { color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 0; margin-bottom: 20px; }
+        .filters { background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin-bottom: 20px; display: flex; gap: 15px; align-items: center; flex-wrap: wrap; border: 1px solid #eee;}
+        .filters label { font-weight: bold; margin-right: 5px; color: #555; }
+        .filters input[type="date"], .filters select, .filters input[type="radio"] { margin-right: 5px; vertical-align: middle; }
+        .filters input[type="radio"] + label { font-weight: normal; margin-right: 15px; }
+        .filters select, .filters input[type="date"] { padding: 8px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem; }
+        .filters button { background-color: #5bc0de; color: white; padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer; transition: background-color 0.3s ease; }
+        .filters button:hover { background-color: #31b0d5; }
+        .chart-container { position: relative; height: 40vh; width: 100%; margin-bottom: 30px; }
+        #weekdayChart { border: 1px solid #eee; border-radius: 5px; background-color: #fff; padding: 10px; }
+        .avg-summary { background-color: #eef; padding: 15px; border-radius: 5px; margin-top: 20px; border: 1px solid #ddf; font-size: 0.95rem; }
+        .table-container { overflow-x: auto; margin-top: 20px; }
+        table { width: 100%; border-collapse: collapse; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        th, td { border: 1px solid #e0e0e0; padding: 10px 12px; text-align: left; vertical-align: middle; font-size: 0.9rem; }
+        th { background-color: #f8f8f8; font-weight: bold; color: #333; text-transform: uppercase; font-size: 0.85rem; }
+        tbody tr:nth-child(even) { background-color: #fdfdfd; }
+        tbody tr:hover { background-color: #f0f0f0; }
+        td { color: #555; }
+        td:not(:first-child) { text-align: right; }
+        .message-area { padding: 15px; margin-bottom: 20px; border-radius: 4px; border: 1px solid transparent; }
+        .message-area.error { background-color: #f2dede; color: #a94442; border-color: #ebccd1; }
+        .message-area:empty { display: none; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <nav>
-            <a href="{{ url_for('read_root_page_ui') }}">홈</a> |
-            <a href="{{ url_for('ui_list_and_add_meso_sales_page') }}">메소 판매</a> |
-            <a href="{{ url_for('ui_list_and_add_hunting_sessions_page') }}">사냥</a> |
-            <a href="{{ url_for('ui_list_and_add_jjul_sessions_page') }}">쩔</a> |
-            <a href="{{ url_for('ui_statistics_daily_page') }}">일별</a> |
-            <a href="{{ url_for('ui_statistics_map_page') }}">맵별</a> |
-            <strong>요일별</strong>
-        </nav>
+    <header>
+        <h1>메이플스토리 수익 기록 웹</h1>
+    </header>
 
-        <h1>요일별 요약</h1>
+     <!-- 네비게이션 바 - '타임' 텍스트 제거 -->
+    <nav>
+        <ul>
+            <li><a href="{{ url_for('read_home') }}">홈</a></li>
+            <li><a href="{{ url_for('meso_sales_page') }}">메소 판매</a></li>
+            <li><a href="{{ url_for('hunting_times_page') }}">사냥</a></li> <!-- ' 타임' 제거 -->
+            <li><a href="{{ url_for('jjul_times_page') }}">쩔</a></li>   <!-- ' 타임' 제거 -->
+            <li class="dropdown">
+                <a href="javascript:void(0)" class="dropbtn active">통계</a> <!-- active -->
+                <div class="dropdown-content">
+                    <a href="{{ url_for('statistics_daily_page') }}">일별 요약</a>
+                    <a href="{{ url_for('statistics_map_page') }}">맵별 요약</a>
+                    <a href="{{ url_for('statistics_weekday_page') }}" class="active">요일별 요약</a> <!-- active -->
+                </div>
+            </li>
+        </ul>
+    </nav>
+    <!-- 네비게이션 바 끝 -->
 
-        <div id="message-area-stats-weekday"><!-- 메시지 영역 --></div>
-        <!-- 기간 필터링 UI -->
-        <div class="filter-section">
-            <label for="weekdayStartDate">시작 날짜:</label><input type="date" id="weekdayStartDate"><label for="weekdayEndDate">종료 날짜:</label><input type="date" id="weekdayEndDate"><button id="viewWeekdaySummaryButton">조회</button><button id="resetWeekdayDateFilterButton" style="background-color: #757575;">전체 기간 조회</button>
+    <main class="container">
+        <h2>요일별 요약 통계</h2>
+        <div id="message-area-weekday" class="message-area"></div>
+        <div class="filters">
+            <label for="startDate">시작 날짜:</label>
+            <input type="date" id="startDate">
+            <label for="endDate">종료 날짜:</label>
+            <input type="date" id="endDate">
+            <button onclick="loadWeekdayStats()">조회</button>
+            <span style="margin-left: auto;">
+                <label for="chartType">차트 종류:</label>
+                <input type="radio" id="chartTypeBar" name="chartType" value="bar" checked onchange="updateWeekdayChart()">
+                <label for="chartTypeBar">막대</label>
+                <input type="radio" id="chartTypeLine" name="chartType" value="line" onchange="updateWeekdayChart()">
+                <label for="chartTypeLine">선</label>
+            </span>
+            <span>
+                <label for="chartDataSelect">차트 데이터:</label>
+                <select id="chartDataSelect" onchange="updateWeekdayChart(); displayAverageSummary(currentWeekdayData);"> <!-- 평균 요약도 같이 업데이트 -->
+                    <option value="net_profit">순수익</option>
+                    <option value="total_profit">총수익</option>
+                    <option value="hunting_profit">사냥 수익 (메소+일반템)</option>
+                    <option value="jjul_profit">쩔 수익 (쩔비+일반템)</option>
+                    <option value="rare_item_profit">고가템 수익</option>
+                    <option value="normal_item_profit">일반템 수익</option>
+                    <option value="consumable_gained_profit">소모템 획득 수익</option>
+                </select>
+            </span>
         </div>
         <div class="chart-container">
-            <!-- 차트 데이터 선택 UI -->
-            <div style="text-align: center; margin-bottom: 15px;">
-                <label for="weekdayChartDataSelect" style="margin-right: 5px;">차트 데이터 선택:</label>
-                <select id="weekdayChartDataSelect">
-                    <option value="overall_net_profit" selected>전체 순수익</option>
-                    <option value="comparison">사냥/쩔 순수익 비교</option>
-                    <option value="total_hunting_net_profit">사냥 순수익 (단독)</option>
-                    <option value="total_jjul_net_profit">쩔 순수익 (단독)</option>
-                    <option value="total_sessions">총 기록 수</option> <!-- "세션" -> "기록" (또는 "타임") -->
-                </select>
-            </div>
-            <!-- 차트 종류 선택 UI -->
-            <div style="text-align: center; margin-bottom: 15px; margin-top: 10px;"><label style="margin-right: 10px;">차트 종류:</label><input type="radio" id="chartTypeBar" name="chartType" value="bar" checked style="margin-right: 3px;"><label for="chartTypeBar" style="margin-right: 10px;">막대</label><input type="radio" id="chartTypeLine" name="chartType" value="line" style="margin-right: 3px;"><label for="chartTypeLine">선</label></div>
-            <h3 id="weekdayChartTitle">요일별 전체 순수익</h3><canvas id="weekdayNetProfitChart"></canvas>
-            <p id="averageDescription" class="average-line-description" style="display: none;"></p>
+            <canvas id="weekdayChart"></canvas>
         </div>
-        <div class="summary-table-container">
-             <h3>요일별 상세 통계</h3>
-             <table id="weekdaySummaryTable" class="summary-table">
+         <div id="avgSummary" class="avg-summary" style="display: none;">
+            <p><strong>평균 요약:</strong> <span id="avgText"></span></p>
+        </div>
+        <h3>상세 데이터</h3>
+        <div class="table-container">
+            <table id="weekdayStatsTable">
                 <thead>
                     <tr>
-                        <th>요일</th>
-                        <th>총 기록 수</th> <!-- "세션" -> "기록" (또는 "타임") -->
-                        <th>사냥 총순수익</th>
-                        <th>쩔 총순수익</th>
-                        <th>전체 총순수익</th>
+                        <th>요일</th> <th>사냥수익</th> <th>쩔수익</th> <th>고가템수익</th>
+                        <th>일반템수익</th> <th>소모템획득수익</th> <th>총수익</th> <th>순수익</th>
                     </tr>
                 </thead>
-                <tbody id="weekdaySummaryTableBody"><tr><td colspan="5" style="text-align:center;">조회할 기간을 선택하거나 전체 기간 조회를 눌러주세요.</td></tr></tbody>
+                <tbody>
+                    <tr> <td colspan="8" style="text-align:center;">데이터를 조회해주세요.</td> </tr>
+                </tbody>
             </table>
         </div>
-    </div>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 의문의돌맹이. All rights reserved.</p>
+    </footer>
 
     <script>
-        // DOM 요소, 전역 변수, 색상 정의 (이전과 동일)
-        const messageAreaStatsWeekday = document.getElementById('message-area-stats-weekday');
-        const weekdaySummaryTableBody = document.getElementById('weekdaySummaryTableBody');
-        const chartCanvas = document.getElementById('weekdayNetProfitChart');
-        const weekdayChartTitleEl = document.getElementById('weekdayChartTitle');
-        const weekdayChartDataSelect = document.getElementById('weekdayChartDataSelect');
-        const chartTypeRadios = document.querySelectorAll('input[name="chartType"]');
-        const averageDescriptionEl = document.getElementById('averageDescription');
-        const weekdayStartDateInput = document.getElementById('weekdayStartDate');
-        const weekdayEndDateInput = document.getElementById('weekdayEndDate');
-        const viewWeekdaySummaryButton = document.getElementById('viewWeekdaySummaryButton');
-        const resetWeekdayDateFilterButton = document.getElementById('resetWeekdayDateFilterButton');
-        let weekdayChartInstance = null;
-        let currentSummaryData = [];
-        const huntingColor = 'rgba(54, 162, 235, 0.7)'; const huntingBorderColor = 'rgba(54, 162, 235, 1)';
-        const jjulColor = 'rgba(255, 99, 132, 0.7)';   const jjulBorderColor = 'rgba(255, 99, 132, 1)';
-        const overallColor = 'rgba(75, 192, 192, 0.7)'; const overallBorderColor = 'rgba(75, 192, 192, 1)';
-        const sessionColor = 'rgba(153, 102, 255, 0.7)'; const sessionBorderColor = 'rgba(153, 102, 255, 1)';
+        // JavaScript 코드는 이전 답변과 동일하게 유지 (API URL 변경 없음)
+        const startDateInput = document.getElementById('startDate');
+        const endDateInput = document.getElementById('endDate');
+        const chartDataSelect = document.getElementById('chartDataSelect');
+        const weekdayTableBody = document.getElementById('weekdayStatsTable').getElementsByTagName('tbody')[0];
+        const messageArea = document.getElementById('message-area-weekday');
+        const avgSummaryDiv = document.getElementById('avgSummary');
+        const avgTextSpan = document.getElementById('avgText');
+        let weekdayChart = null;
+        let currentWeekdayData = [];
+        const weekdaysOrder = ["월요일", "화요일", "수요일", "목요일", "금요일", "토요일", "일요일"];
 
-        // 이벤트 리스너 (이전과 동일)
-        document.addEventListener('DOMContentLoaded', () => { fetchWeekdaySummary(); });
-        viewWeekdaySummaryButton.addEventListener('click', () => { if (weekdayStartDateInput.value && weekdayEndDateInput.value) { fetchWeekdaySummary(weekdayStartDateInput.value, weekdayEndDateInput.value); } else { displayStatsWeekdayMessage('시작 날짜와 종료 날짜를 모두 선택해주세요.', 'warning'); } });
-        resetWeekdayDateFilterButton.addEventListener('click', () => { weekdayStartDateInput.value = ''; weekdayEndDateInput.value = ''; fetchWeekdaySummary(); });
-        weekdayChartDataSelect.addEventListener('change', () => { triggerChartUpdate(); });
-        chartTypeRadios.forEach(radio => { radio.addEventListener('change', () => { triggerChartUpdate(); }); });
+        document.addEventListener('DOMContentLoaded', () => {
+            const today = new Date();
+            const firstDayLastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+            endDateInput.value = today.toISOString().split('T')[0];
+            startDateInput.value = firstDayLastMonth.toISOString().split('T')[0];
+            loadWeekdayStats();
+        });
 
-        function triggerChartUpdate() { const selectedDataType = weekdayChartDataSelect.value; const selectedChartType = document.querySelector('input[name="chartType"]:checked').value; if (currentSummaryData.length > 0) { updateWeekdayChart(currentSummaryData, selectedDataType, selectedChartType, weekdayStartDateInput.value, weekdayEndDateInput.value); } }
-
-        async function fetchWeekdaySummary(startDate, endDate) { /* ... (fetch 로직 동일) ... */
-            displayStatsWeekdayMessage('데이터를 불러오는 중...', 'info'); weekdaySummaryTableBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">데이터를 불러오는 중...</td></tr>'; if (weekdayChartInstance) { weekdayChartInstance.destroy(); weekdayChartInstance = null; } currentSummaryData = []; averageDescriptionEl.style.display = 'none'; let apiUrl = '/statistics/weekday-summary'; const params = new URLSearchParams(); if (startDate && endDate) { params.append('start_date', startDate); params.append('end_date', endDate); } if (params.toString()) { apiUrl += `?${params.toString()}`; }
-            try { const response = await fetch(apiUrl); if (!response.ok) { const errorData = await response.json().catch(() => null); let errorMessage = `통계 조회 실패 (상태 코드: ${response.status})`; if (errorData && errorData.detail) { errorMessage += (typeof errorData.detail === 'string') ? (": " + errorData.detail) : (": " + JSON.stringify(errorData.detail)); } displayStatsWeekdayMessage(errorMessage, 'error'); weekdaySummaryTableBody.innerHTML = `<tr><td colspan="5" style="text-align:center;">${errorMessage}</td></tr>`; return; }
-                const data = await response.json(); currentSummaryData = data.summary_items; let successMessage = '요일별 통계 조회가 완료되었습니다.'; if (startDate && endDate) { successMessage = `${startDate} ~ ${endDate} 기간의 ${successMessage}`; } else { successMessage = `전체 기간 ${successMessage}`; } displayStatsWeekdayMessage(successMessage, 'success'); renderWeekdaySummaryTable(currentSummaryData); triggerChartUpdate();
-            } catch (error) { console.error('Error fetching weekday summary:', error); displayStatsWeekdayMessage('통계 조회 중 오류가 발생했습니다. 네트워크를 확인해주세요.', 'error'); weekdaySummaryTableBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">통계 조회 중 오류 발생</td></tr>'; }
-        }
-
-        function renderWeekdaySummaryTable(summaryItems) {
-             weekdaySummaryTableBody.innerHTML = ''; if (!summaryItems || summaryItems.length === 0) { weekdaySummaryTableBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">요약할 데이터가 없습니다.</td></tr>'; return; }
-             summaryItems.forEach(item => {
-                const row = weekdaySummaryTableBody.insertRow();
-                row.insertCell().textContent = item.weekday_name;
-                row.insertCell().textContent = item.total_sessions.toLocaleString('ko-KR'); // total_sessions 스키마 필드명 유지
-                row.insertCell().textContent = item.total_hunting_net_profit.toLocaleString('ko-KR');
-                row.insertCell().textContent = item.total_jjul_net_profit.toLocaleString('ko-KR');
-                row.insertCell().textContent = item.overall_net_profit.toLocaleString('ko-KR');
-             });
-        }
-
-        // 차트 업데이트 함수 (차트 라벨 및 Y축 단위 텍스트 변경)
-        function updateWeekdayChart(summaryItems, dataType, chartType, startDate, endDate) {
-            if (!weekdayChartTitleEl || !chartCanvas || !averageDescriptionEl) return;
-
-            let chartTitle = ''; let datasets = []; let yAxisLabelSuffix = ' 메소'; let dataValuesForAverage = [];
-            const labels = summaryItems.map(item => item.weekday_name);
-
-            switch (dataType) {
-                case 'comparison': chartTitle = '요일별 사냥/쩔 순수익 비교'; const huntingData = summaryItems.map(item => item.total_hunting_net_profit); const jjulData = summaryItems.map(item => item.total_jjul_net_profit); datasets = [ { label: '사냥 순수익', data: huntingData, backgroundColor: huntingColor, borderColor: huntingBorderColor, borderWidth: chartType === 'bar' ? 1 : 2, fill: chartType === 'line' ? false : undefined, tension: chartType === 'line' ? 0.1 : undefined }, { label: '쩔 순수익', data: jjulData, backgroundColor: jjulColor, borderColor: jjulBorderColor, borderWidth: chartType === 'bar' ? 1 : 2, fill: chartType === 'line' ? false : undefined, tension: chartType === 'line' ? 0.1 : undefined } ]; dataValuesForAverage = summaryItems.map(item => item.overall_net_profit); yAxisLabelSuffix = ' 메소'; break;
-                case 'total_hunting_net_profit': chartTitle = '요일별 사냥 순수익'; dataValuesForAverage = summaryItems.map(item => item.total_hunting_net_profit); datasets = [{ label: '사냥 순수익', data: dataValuesForAverage, backgroundColor: huntingColor, borderColor: huntingBorderColor, borderWidth: chartType === 'bar' ? 1 : 2, fill: chartType === 'line' ? false : undefined, tension: chartType === 'line' ? 0.1 : undefined }]; yAxisLabelSuffix = ' 메소'; break;
-                case 'total_jjul_net_profit': chartTitle = '요일별 쩔 순수익'; dataValuesForAverage = summaryItems.map(item => item.total_jjul_net_profit); datasets = [{ label: '쩔 순수익', data: dataValuesForAverage, backgroundColor: jjulColor, borderColor: jjulBorderColor, borderWidth: chartType === 'bar' ? 1 : 2, fill: chartType === 'line' ? false : undefined, tension: chartType === 'line' ? 0.1 : undefined }]; yAxisLabelSuffix = ' 메소'; break;
-                case 'total_sessions': chartTitle = '요일별 총 기록 수'; dataValuesForAverage = summaryItems.map(item => item.total_sessions); datasets = [{ label: '총 기록 수', data: dataValuesForAverage, backgroundColor: sessionColor, borderColor: sessionBorderColor, borderWidth: chartType === 'bar' ? 1 : 2, fill: chartType === 'line' ? false : undefined, tension: chartType === 'line' ? 0.1 : undefined }]; yAxisLabelSuffix = ' 회'; break; /* "세션" -> "기록" */
-                case 'overall_net_profit': default: chartTitle = '요일별 전체 순수익'; dataValuesForAverage = summaryItems.map(item => item.overall_net_profit); datasets = [{ label: '전체 순수익', data: dataValuesForAverage, backgroundColor: overallColor, borderColor: overallBorderColor, borderWidth: chartType === 'bar' ? 1 : 2, fill: chartType === 'line' ? false : undefined, tension: chartType === 'line' ? 0.1 : undefined }]; yAxisLabelSuffix = ' 메소'; break;
+        async function loadWeekdayStats() {
+            const startDate = startDateInput.value;
+            const endDate = endDateInput.value;
+            if (!startDate || !endDate) { showMessage('시작 날짜와 종료 날짜를 모두 선택해주세요.', 'error'); return; }
+            if (startDate > endDate) { showMessage('시작 날짜는 종료 날짜보다 이전이어야 합니다.', 'error'); return; }
+            showMessage('');
+            weekdayTableBody.innerHTML = '<tr><td colspan="8" style="text-align:center;">데이터를 불러오는 중...</td></tr>';
+            avgSummaryDiv.style.display = 'none';
+            const apiUrl = `/api/statistics/weekday?start_date=${startDate}&end_date=${endDate}`; // API URL 유지
+            try {
+                const response = await fetch(apiUrl);
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ detail: '데이터 로드 실패' }));
+                    throw new Error(errorData.detail || `서버 응답 오류: ${response.status}`);
+                }
+                currentWeekdayData = await response.json();
+                renderWeekdayTable(currentWeekdayData);
+                updateWeekdayChart();
+                displayAverageSummary(currentWeekdayData);
+            } catch (error) {
+                showMessage(`오류: ${error.message}`, 'error');
+                weekdayTableBody.innerHTML = `<tr><td colspan="8" style="text-align:center; color: red;">데이터 로드 실패</td></tr>`;
+                console.error('Error loading weekday statistics:', error);
             }
-            const averageValue = dataValuesForAverage.length > 0 ? dataValuesForAverage.reduce((sum, value) => sum + value, 0) / dataValuesForAverage.length : 0;
-            let chartTitlePrefix = (startDate && endDate) ? `${startDate} ~ ${endDate}` : '전체 기간';
-            weekdayChartTitleEl.textContent = `${chartTitlePrefix} ${chartTitle}`;
-
-            if (dataValuesForAverage.length > 0 && (dataType !== 'comparison')) {
-                averageDescriptionEl.textContent = `선택된 데이터의 평균: ${averageValue.toLocaleString('ko-KR', { maximumFractionDigits: (yAxisLabelSuffix === ' 회' ? 1 : 0) })}${yAxisLabelSuffix}`; /* "평균값" -> "평균" */
-                averageDescriptionEl.style.display = 'block';
-            } else { averageDescriptionEl.style.display = 'none'; }
-
-            const chartConfig = { type: chartType, data: { labels: labels, datasets: datasets }, options: { responsive: true, maintainAspectRatio: true, scales: { y: { beginAtZero: true, ticks: { callback: value => value.toLocaleString('ko-KR') + yAxisLabelSuffix } } }, plugins: { tooltip: { callbacks: { label: context => { let label = context.dataset.label || ''; if (label) { label += ': '; } if (context.parsed.y !== null) { label += context.parsed.y.toLocaleString('ko-KR') + yAxisLabelSuffix; } return label; }}}} } };
-
-            if (weekdayChartInstance) { if (weekdayChartInstance.config.type !== chartType || weekdayChartInstance.data.datasets.length !== datasets.length) { weekdayChartInstance.destroy(); if (!summaryItems || summaryItems.length === 0) { if(chartCanvas.getContext('2d')) { chartCanvas.getContext('2d').clearRect(0, 0, chartCanvas.width, chartCanvas.height); } weekdayChartInstance = null; return; } weekdayChartInstance = new Chart(chartCanvas, chartConfig); } else { weekdayChartInstance.data = chartConfig.data; weekdayChartInstance.options = chartConfig.options; weekdayChartInstance.update(); } } else { if (!summaryItems || summaryItems.length === 0) { if(chartCanvas.getContext('2d')) { chartCanvas.getContext('2d').clearRect(0, 0, chartCanvas.width, chartCanvas.height); } return; } weekdayChartInstance = new Chart(chartCanvas, chartConfig); }
         }
 
-        function displayStatsWeekdayMessage(message, type) { /* ... (메시지 표시 동일) ... */ if (!messageAreaStatsWeekday) return; const messageDiv = document.createElement('div'); messageDiv.className = `message ${type}`; messageDiv.textContent = message; messageAreaStatsWeekday.innerHTML = ''; messageAreaStatsWeekday.appendChild(messageDiv); setTimeout(() => { if (messageDiv.parentNode === messageAreaStatsWeekday) { messageAreaStatsWeekday.removeChild(messageDiv); } }, 5000); }
+        function renderWeekdayTable(data) {
+            weekdayTableBody.innerHTML = '';
+            if (!data || data.length === 0) {
+                weekdayTableBody.innerHTML = '<tr><td colspan="8" style="text-align:center;">해당 기간의 데이터가 없습니다.</td></tr>';
+                return;
+            }
+            data.sort((a, b) => weekdaysOrder.indexOf(a.weekday) - weekdaysOrder.indexOf(b.weekday));
+            data.forEach(item => {
+                const row = weekdayTableBody.insertRow();
+                row.insertCell().textContent = item.weekday || 'N/A';
+                row.insertCell().textContent = (item.hunting_profit || 0).toLocaleString();
+                row.insertCell().textContent = (item.jjul_profit || 0).toLocaleString();
+                row.insertCell().textContent = (item.rare_item_profit || 0).toLocaleString();
+                row.insertCell().textContent = (item.normal_item_profit || 0).toLocaleString();
+                row.insertCell().textContent = (item.consumable_gained_profit || 0).toLocaleString();
+                row.insertCell().textContent = (item.total_profit || 0).toLocaleString();
+                row.insertCell().textContent = (item.net_profit || 0).toLocaleString();
+            });
+        }
+
+        function updateWeekdayChart() {
+            if (!currentWeekdayData || currentWeekdayData.length === 0) {
+                if (weekdayChart) { weekdayChart.destroy(); weekdayChart = null; }
+                return;
+            }
+            const selectedKey = chartDataSelect.value;
+            const selectedLabel = chartDataSelect.options[chartDataSelect.selectedIndex].text;
+            const chartType = document.querySelector('input[name="chartType"]:checked').value;
+            const sortedData = [...currentWeekdayData].sort((a, b) => weekdaysOrder.indexOf(a.weekday) - weekdaysOrder.indexOf(b.weekday));
+            const labels = sortedData.map(item => item.weekday);
+            const dataPoints = sortedData.map(item => item[selectedKey] || 0);
+            const chartConfig = {
+                type: chartType,
+                data: {
+                    labels: labels,
+                    datasets: [{ label: selectedLabel, data: dataPoints, backgroundColor: chartType === 'bar' ? generateBarColors(labels.length) : 'rgba(75, 192, 192, 0.2)', borderColor: chartType === 'bar' ? generateBarColors(labels.length, true) : getRandomColor(), borderWidth: chartType === 'bar' ? 1 : 2, fill: chartType !== 'bar', tension: 0.1 }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: true, ticks: { callback: value => value.toLocaleString() } } },
+                    plugins: { tooltip: { callbacks: { label: context => `${context.dataset.label || ''}: ${context.parsed.y !== null ? context.parsed.y.toLocaleString() : ''}` } } }
+                }
+            };
+            const ctx = document.getElementById('weekdayChart').getContext('2d');
+            if (weekdayChart) { weekdayChart.destroy(); }
+            weekdayChart = new Chart(ctx, chartConfig);
+        }
+
+        function displayAverageSummary(data) {
+             if (!data || data.length === 0) { avgSummaryDiv.style.display = 'none'; return; }
+             const selectedKey = chartDataSelect.value;
+             const selectedLabel = chartDataSelect.options[chartDataSelect.selectedIndex].text;
+             const totalValue = data.reduce((sum, item) => sum + (item[selectedKey] || 0), 0);
+             // 요일 데이터는 보통 7개지만, 데이터가 없는 요일이 있을 수 있으므로 실제 데이터 개수로 나눔
+             const averageValue = data.length > 0 ? totalValue / data.length : 0;
+             avgTextSpan.textContent = `선택된 기간 동안의 ${selectedLabel} 평균은 약 ${averageValue.toLocaleString(undefined, {maximumFractionDigits: 0})} 입니다.`;
+             avgSummaryDiv.style.display = 'block';
+        }
+
+        function showMessage(message, type = 'info') {
+            messageArea.textContent = message;
+            messageArea.className = 'message-area ' + type;
+        }
+
+        function getRandomColor() {
+            const r = Math.floor(Math.random() * 200); const g = Math.floor(Math.random() * 200); const b = Math.floor(Math.random() * 200);
+            return `rgb(${r}, ${g}, ${b})`;
+        }
+
+        function generateBarColors(count, border = false) {
+            const colors = [ 'rgba(255, 99, 132, 0.6)', 'rgba(54, 162, 235, 0.6)', 'rgba(255, 206, 86, 0.6)', 'rgba(75, 192, 192, 0.6)', 'rgba(153, 102, 255, 0.6)', 'rgba(255, 159, 64, 0.6)', 'rgba(99, 255, 132, 0.6)' ];
+            const borderColors = [ 'rgba(255, 99, 132, 1)', 'rgba(54, 162, 235, 1)', 'rgba(255, 206, 86, 1)', 'rgba(75, 192, 192, 1)', 'rgba(153, 102, 255, 1)', 'rgba(255, 159, 64, 1)', 'rgba(99, 255, 132, 1)' ];
+            const result = [];
+            for (let i = 0; i < count; i++) { result.push(border ? borderColors[i % borderColors.length] : colors[i % colors.length]); }
+            return result;
+        }
     </script>
 </body>
 </html>
