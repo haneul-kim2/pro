@@ -2164,4 +2164,3 @@ if __name__ == "__main__":
 
     root.after(100, set_initial_focus) 
     root.mainloop()
-
