@@ -65,6 +65,7 @@
         .message-area { padding: 15px; margin-bottom: 20px; border-radius: 4px; border: 1px solid transparent; }
         .message-area.success { background-color: #dff0d8; color: #3c763d; border-color: #d6e9c6; }
         .message-area.error { background-color: #f2dede; color: #a94442; border-color: #ebccd1; }
+        .message-area.info { background-color: #d9edf7; color: #31708f; border-color: #bce8f1; }
         .message-area:empty { display: none; }
 
         table { width: 100%; border-collapse: collapse; margin-top: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
@@ -95,40 +96,40 @@
         <h1>메이플스토리 수익 기록 웹</h1>
     </header>
 
-   <!-- 네비게이션 바 - 순서 및 이름 변경 -->
-    <nav>
+    <!-- 네비게이션 바 - 순서 및 이름 변경 -->
+<nav>
     <ul>
         <!-- 1. 홈 -->
-        <li><a href="{{ url_for('read_home') }}">홈</a></li> <!-- 'active' 클래스는 페이지별로 다를 수 있으니 일단 빼고 복사하거나, 나중에 각 페이지에 맞게 수정 -->
+        <li><a href="{{ url_for('home') }}">홈</a></li>
 
         <!-- 2. 사냥 -->
-        <li><a href="{{ url_for('hunting_times_page') }}">사냥</a></li>
+        <li><a href="{{ url_for('list_and_add_hunting_sessions') }}" class="active">사냥</a></li> <!-- 현재 페이지 active 표시 -->
 
         <!-- 3. 쩔 -->
-        <li><a href="{{ url_for('jjul_times_page') }}">쩔</a></li>
+        <li><a href="{{ url_for('list_and_add_jjul_sessions') }}">쩔</a></li>
 
         <!-- 4. 경험치 통계 (신규 추가) -->
-        <li><a href="{{ url_for('read_experience_statistics_page') }}">경험치 통계</a></li>
+        <li><a href="{{ url_for('statistics_experience') }}">경험치 통계</a></li>
 
         <!-- 5. 통계 (드롭다운) -->
         <li class="dropdown">
             <a href="javascript:void(0)" class="dropbtn">통계</a>
             <div class="dropdown-content">
-                <a href="{{ url_for('statistics_daily_page') }}">일별 요약</a>
-                <a href="{{ url_for('statistics_map_page') }}">맵별 요약</a>
-                <a href="{{ url_for('statistics_weekday_page') }}">요일별 요약</a>
+                <a href="{{url_for('statistics_daily') }}">일별 요약</a>
+                <a href="{{ url_for('statistics_map') }}">맵별 요약</a>
+                <a href="{{ url_for('statistics_weekday') }}">요일별 요약</a>
             </div>
         </li>
 
         <!-- 6. 메소 판매 기록 (이름 변경) -->
-        <li><a href="{{ url_for('meso_sales_page') }}">메소 판매 기록</a></li>
+        <li><a href="{{ url_for('list_and_add_meso_sales') }}">메소 판매 기록</a></li>
     </ul>
 </nav>
     <!-- 네비게이션 바 끝 -->
 
     <main class="container">
         <h2>사냥 기록</h2>
-        <div id="message-area-hunting" class="message-area"></div>
+        <div id="message-area-hunting" class="message-area"></div> <!-- 메시지 영역 ID 확인 -->
         <form id="huntingForm">
             <!-- 사냥 기본 정보 -->
             <div class="form-section">
@@ -174,16 +175,20 @@
                         <input type="number" id="entry_fee" name="entry_fee" value="0">
                     </div>
                     <div class="form-group">
-                        <label for="start_experience">시작 경험치:</label>
-                        <input type="number" id="start_experience" name="start_experience" value="0" required>
+                        <label for="start_level">시작 레벨:</label>
+                        <input type="number" id="start_level" name="start_level" value="0" min="0" required>
                     </div>
                     <div class="form-group">
-                        <label for="end_experience">종료 경험치:</label>
-                        <input type="number" id="end_experience" name="end_experience" value="0" required>
+                        <label for="start_exp_percentage">시작 경험치 % (소수점 2자리까지):</label>
+                        <input type="number" id="start_exp_percentage" name="start_exp_percentage" value="0.00" step="0.01" min="0" max="100" required>
                     </div>
                     <div class="form-group">
-                        <label for="coupon_15min_count">15분 경쿠 사용 횟수:</label>
-                        <input type="number" id="coupon_15min_count" name="coupon_15min_count" value="0" min="0">
+                        <label for="end_level">종료 레벨 (선택):</label>
+                        <input type="number" id="end_level" name="end_level" value="" min="0" placeholder="시작 레벨과 동일하면 비워도 됨">
+                    </div>
+                    <div class="form-group">
+                        <label for="end_exp_percentage">종료 경험치 % (소수점 2자리까지, 선택):</label>
+                        <input type="number" id="end_exp_percentage" name="end_exp_percentage" value="" step="0.01" min="0" max="100" placeholder="경험치 변화 없으면 비워도 됨">
                     </div>
                 </div>
             </div>
@@ -252,26 +257,21 @@
     </main>
 
     <footer>
-        <p>© 2025 의문의돌맹이. All rights reserved.</p> <!-- 저작권 연도 2025로 수정 -->
+        <p>© 2025 의문의돌맹이. All rights reserved.</p>
     </footer>
 
     <script>
         const huntingForm = document.getElementById('huntingForm');
-        const messageArea = document.getElementById('message-area-hunting');
+        const messageArea = document.getElementById('message-area-hunting'); // ID 일치시킴
         const rareItemsContainer = document.getElementById('rareItemsContainer');
         const consumableItemsContainer = document.getElementById('consumableItemsContainer');
         const huntingTableBody = document.getElementById('huntingSessionsTable').getElementsByTagName('tbody')[0];
 
-        // 페이지 로드 시 오늘 날짜 설정 및 목록 불러오기
         document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('session_date').value = new Date().toISOString().split('T')[0];
             loadHuntingSessions();
-            // 초기 아이템 행 추가 (선택적)
-            // addRareItemRow();
-            // addConsumableRow();
         });
 
-        // 고가 아이템 행 추가 함수
         function addRareItemRow() {
             const index = rareItemsContainer.children.length;
             const div = document.createElement('div');
@@ -286,7 +286,6 @@
             rareItemsContainer.appendChild(div);
         }
 
-        // 소모/획득 아이템 행 추가 함수
         function addConsumableRow() {
             const index = consumableItemsContainer.children.length;
             const div = document.createElement('div');
@@ -305,117 +304,174 @@
             consumableItemsContainer.appendChild(div);
         }
 
-        // 폼 제출 처리
         huntingForm.addEventListener('submit', async function(event) {
             event.preventDefault();
-            showMessage(''); // 이전 메시지 초기화
+            showMessage('', 'info'); // 이전 메시지 초기화, info로 시작
 
             const formData = new FormData(huntingForm);
             const data = {};
 
-            // 기본 필드 처리
             for (let [key, value] of formData.entries()) {
-                 // 아이템 필드는 아래에서 별도 처리
                 if (!key.startsWith('rare_items[') && !key.startsWith('consumable_items[')) {
-                    // 숫자 필드는 숫자로 변환 (빈 문자열이나 변환 실패 시 0으로)
-                    if (['start_meso', 'end_meso', 'sold_meso', 'entry_fee', 'start_experience', 'end_experience', 'coupon_15min_count'].includes(key)) {
+                    // 숫자 필드 목록에 'start_level' 추가, 'start_exp_percentage'는 별도 처리
+                    if (['start_meso', 'end_meso', 'sold_meso', 'entry_fee', 'coupon_15min_count', 'start_level'].includes(key)) {
                         data[key] = parseInt(value) || 0;
-                    } else {
+                    } else if (key === 'end_level') { // end_level은 비어있을 수 있음
+                        data[key] = value === '' ? null : (parseInt(value) || 0);
+                        if (data[key] === 0 && value !== '0') data[key] = null; 
+                    } else if (['start_exp_percentage', 'end_exp_percentage'].includes(key)) {
+                        data[key] = value === '' ? null : (parseFloat(value) || 0.0);
+                         if (key === 'end_exp_percentage' && data[key] === 0.0 && value !== '0.00' && value !== '0') data[key] = null;
+                    }
+                    // 🚨 기존 start_experience, end_experience는 HTML에서 제거되었으므로 자동으로 처리 안됨 🚨
+                    else {
                         data[key] = value;
                     }
                 }
             }
 
-            // 고가 아이템 처리
             data.rare_items = [];
             const rareItemRows = rareItemsContainer.querySelectorAll('.item-row');
             rareItemRows.forEach((row, index) => {
-                const name = row.querySelector(`input[name="rare_items[${index}][item_name]"]`).value.trim();
-                const value = parseInt(row.querySelector(`input[name="rare_items[${index}][item_value]"]`).value) || 0;
-                if (name && value > 0) { // 이름이 있고 가치가 0보다 클 때만 추가
-                    data.rare_items.push({ item_name: name, item_value: value });
+                const nameInput = row.querySelector(`input[name="rare_items[${index}][item_name]"]`);
+                const valueInput = row.querySelector(`input[name="rare_items[${index}][item_value]"]`);
+                if (nameInput && valueInput) { // defensive coding
+                    const name = nameInput.value.trim();
+                    const value = parseInt(valueInput.value) || 0;
+                    if (name) { // 이름만 있어도 일단 추가 (가치는 0일 수 있음)
+                        data.rare_items.push({ item_name: name, item_value: value });
+                    }
                 }
             });
 
-            // 소모/획득 아이템 처리
             data.consumable_items = [];
             const consumableItemRows = consumableItemsContainer.querySelectorAll('.item-row');
             consumableItemRows.forEach((row, index) => {
-                const name = row.querySelector(`input[name="consumable_items[${index}][item_name]"]`).value.trim();
-                const price = parseInt(row.querySelector(`input[name="consumable_items[${index}][price_or_value_per_item]"]`).value) || 0;
-                const startQty = parseInt(row.querySelector(`input[name="consumable_items[${index}][start_quantity]"]`).value) || 0;
-                const endQty = parseInt(row.querySelector(`input[name="consumable_items[${index}][end_quantity]"]`).value) || 0;
-                if (name) { // 이름이 있을 때만 추가
-                    data.consumable_items.push({
-                        item_name: name,
-                        price_or_value_per_item: price,
-                        start_quantity: startQty,
-                        end_quantity: endQty
-                    });
+                const nameInput = row.querySelector(`input[name="consumable_items[${index}][item_name]"]`);
+                const priceInput = row.querySelector(`input[name="consumable_items[${index}][price_or_value_per_item]"]`);
+                const startQtyInput = row.querySelector(`input[name="consumable_items[${index}][start_quantity]"]`);
+                const endQtyInput = row.querySelector(`input[name="consumable_items[${index}][end_quantity]"]`);
+
+                if (nameInput && priceInput && startQtyInput && endQtyInput) { // defensive coding
+                    const name = nameInput.value.trim();
+                    const price = parseInt(priceInput.value) || 0;
+                    const startQty = parseInt(startQtyInput.value) || 0;
+                    const endQty = parseInt(endQtyInput.value) || 0;
+                    if (name) { // 이름이 있을 때만 추가
+                        data.consumable_items.push({
+                            item_name: name,
+                            price_or_value_per_item: price,
+                            start_quantity: startQty,
+                            end_quantity: endQty
+                        });
+                    }
                 }
             });
+            
+            // 사용자 입력값을 서버 스키마에 맞게 변환
+            // 예: session_date, start_time, end_time을 datetime 문자열로 조합
+            // 서버의 HuntingSessionCreate 스키마가 datetime을 기대한다면 여기서 변환 필요
+            // 현재는 문자열 그대로 보내고 서버에서 처리한다고 가정.
+            // 만약 서버가 start_time, end_time을 datetime으로 기대한다면 아래와 같이 조합
+            // data.start_time = data.session_date + 'T' + data.start_time + ':00';
+            // data.end_time = data.session_date + 'T' + data.end_time + ':00';
 
-            // 시간 유효성 검사 (선택적)
-            if (data.start_time >= data.end_time) {
-                 // 자정 넘는 경우 등 고려 필요 -> 일단 간단히 경고만
-                 // showMessage('종료 시간은 시작 시간보다 이후여야 합니다.', 'error');
-                 // return;
-                 console.warn("종료 시간이 시작 시간보다 빠르거나 같습니다. 자정 넘김?");
-            }
 
             try {
                 showMessage('기록 추가 및 계산 중...', 'info');
-                 // API 엔드포인트는 아직 '/api/hunting-sessions/' 유지
-                const response = await fetch('/api/hunting-times/', { // '/api/hunting-sessions/' -> '/api/hunting-times/'
+                const response = await fetch('/api/hunting-times/', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(data),
                 });
 
+                // === 수정된 오류 처리 부분 ===
                 if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({ detail: '알 수 없는 서버 오류' }));
-                    throw new Error(errorData.detail || '사냥 기록 추가에 실패했습니다.');
+                    const responseText = await response.text(); // 서버 응답을 텍스트로 먼저 받음
+                    console.error('Server raw response:', responseText); // 원시 응답 로깅
+
+                    let errorDetail = `HTTP error! status: ${response.status}`;
+                    try {
+                        const errorJson = JSON.parse(responseText); // JSON 파싱 시도
+                        if (errorJson.detail) {
+                            if (Array.isArray(errorJson.detail)) {
+                                errorDetail = errorJson.detail.map(err => {
+                                    let field = err.loc && err.loc.length > 1 ? err.loc[1] : '입력값';
+                                    return `${field}: ${err.msg}`;
+                                }).join('; ');
+                            } else if (typeof errorJson.detail === 'string') {
+                                errorDetail = errorJson.detail;
+                            } else {
+                                errorDetail = JSON.stringify(errorJson.detail);
+                            }
+                        } else {
+                             errorDetail = responseText; // JSON 파싱 성공했으나 detail 필드가 없는 경우
+                        }
+                    } catch (e) {
+                        // JSON 파싱 실패 시, responseText (원문) 사용
+                        errorDetail = responseText || `An unknown error occurred. Status: ${response.status}`;
+                    }
+                    throw new Error(errorDetail);
                 }
+                // === 수정된 오류 처리 부분 끝 ===
 
                 const result = await response.json();
                 showMessage('사냥 기록이 성공적으로 추가되었습니다.', 'success');
-                resetHuntingForm(); // 폼 초기화
+                // resetHuntingForm(); // 폼 초기화 주석 처리 (사용자 피드백 반영 가능성)
                 loadHuntingSessions(); // 목록 새로고침
 
             } catch (error) {
                 showMessage(`오류: ${error.message}`, 'error');
-                console.error('Error adding hunting session:', error);
+                console.error('Error adding hunting session (processed):', error.message);
+                console.error('Full error object:', error);
             }
         });
 
-        // 목록 로드 함수
         async function loadHuntingSessions() {
             huntingTableBody.innerHTML = '<tr><td colspan="21" style="text-align:center;">목록을 불러오는 중...</td></tr>';
             try {
-                 // API 엔드포인트는 아직 '/api/hunting-sessions/' 유지
-                const response = await fetch('/api/hunting-times/'); // '/api/hunting-sessions/' -> '/api/hunting-times/'
+                const response = await fetch('/api/hunting-times/');
                 if (!response.ok) { throw new Error(`서버 응답 오류: ${response.status}`); }
                 const sessions = await response.json();
 
-                huntingTableBody.innerHTML = ''; // 목록 초기화
+                huntingTableBody.innerHTML = '';
 
                 if (sessions && sessions.length > 0) {
-                     sessions.sort((a, b) => new Date(b.session_date) - new Date(a.session_date) || new Date(b.created_at) - new Date(a.created_at)); // 날짜 내림차순
+                     sessions.sort((a, b) => { // 날짜, 그 다음 생성 시간으로 정렬
+                        const dateComparison = new Date(b.session_date) - new Date(a.session_date);
+                        if (dateComparison !== 0) return dateComparison;
+                        return new Date(b.created_at) - new Date(a.created_at);
+                     });
 
                     sessions.forEach(session => {
                         const row = huntingTableBody.insertRow();
-                        // 각 필드 데이터 채우기 (값이 없을 경우 대비)
+
                         row.insertCell().textContent = session.session_date || 'N/A';
                         row.insertCell().textContent = session.map_name || 'N/A';
                         row.insertCell().textContent = session.start_time || 'N/A';
                         row.insertCell().textContent = session.end_time || 'N/A';
                         row.insertCell().textContent = (session.start_meso || 0).toLocaleString();
                         row.insertCell().textContent = (session.end_meso || 0).toLocaleString();
-                        row.insertCell().textContent = (session.sold_meso || session.end_meso || 0).toLocaleString(); // 판매후메소 없으면 종료메소
+                        row.insertCell().textContent = (session.sold_meso != null ? session.sold_meso : (session.end_meso || 0)).toLocaleString();
                         row.insertCell().textContent = (session.entry_fee || 0).toLocaleString();
                         row.insertCell().textContent = session.coupon_15min_count || 0;
-                        row.insertCell().textContent = (session.start_experience || 0).toLocaleString();
-                        row.insertCell().textContent = (session.end_experience || 0).toLocaleString();
+
+                        // === ✨ 경험치 관련 컬럼 표시 (수정된 부분) ✨ ===
+                        // 10. 시작레벨(%)
+                        let startLevelDisplay = 'N/A';
+                        if (session.start_level !== null && session.start_level !== undefined) {
+                            startLevelDisplay = `${session.start_level} (${session.start_exp_percentage !== null ? session.start_exp_percentage.toFixed(2) : 'N/A'}%)`;
+                        }
+                        row.insertCell().textContent = startLevelDisplay;
+
+                        // 11. 종료레벨(%)
+                        let endLevelDisplay = 'N/A';
+                        if (session.end_level !== null && session.end_level !== undefined) {
+                            endLevelDisplay = `${session.end_level} (${session.end_exp_percentage !== null ? session.end_exp_percentage.toFixed(2) : 'N/A'}%)`;
+                        }
+                        row.insertCell().textContent = endLevelDisplay;
+                        // === ✨ 경험치 관련 컬럼 표시 끝 ✨ ===
+
                         row.insertCell().textContent = (session.hunting_meso_profit || 0).toLocaleString();
                         row.insertCell().textContent = (session.normal_item_profit || 0).toLocaleString();
                         row.insertCell().textContent = (session.total_rare_item_value || 0).toLocaleString();
@@ -423,12 +479,18 @@
                         row.insertCell().textContent = (session.total_consumable_gained_profit || 0).toLocaleString();
                         row.insertCell().textContent = (session.total_profit || 0).toLocaleString();
                         row.insertCell().textContent = (session.net_profit || 0).toLocaleString();
-                        row.insertCell().textContent = (session.experience_profit || 0).toLocaleString();
-                        row.insertCell().textContent = (session.base_experience_profit || 0).toLocaleString();
-                        row.insertCell().textContent = session.created_at ? new Date(session.created_at).toLocaleString() : 'N/A';
-                        // 삭제 버튼 등 추가 가능
-                        // const actionCell = row.insertCell();
-                        // actionCell.innerHTML = `<button onclick="deleteHuntingSession(${session.id})" class="delete-button">삭제</button>`;
+
+                        // === ✨ 획득 경험치 (gained_exp) 표시 ✨ ===
+                        // 19. 획득경험치 (또는 "경험치수익" 컬럼에 해당)
+                        row.insertCell().textContent = (session.gained_exp !== null && session.gained_exp !== undefined ? session.gained_exp.toLocaleString() : 'N/A');
+                        // === ✨ 획득 경험치 표시 끝 ✨ ===
+
+                        // === ✨ "원경험치" 컬럼 처리 (이제 gained_exp로 통합되었으므로 의미가 없을 수 있음) ✨ ===
+                        // 20. 원경험치
+                        row.insertCell().textContent = 'N/A'; // 또는 이 컬럼을 HTML thead에서 제거하는 것을 고려
+                        // === ✨ "원경험치" 컬럼 처리 끝 ✨ ===
+
+                        row.insertCell().textContent = session.created_at ? new Date(session.created_at).toLocaleString('ko-KR') : 'N/A';
                     });
                 } else {
                     huntingTableBody.innerHTML = '<tr><td colspan="21" style="text-align:center;">기록된 사냥 내역이 없습니다.</td></tr>';
@@ -440,43 +502,18 @@
             }
         }
 
-        // 메시지 표시 함수
         function showMessage(message, type = 'info') {
             messageArea.textContent = message;
-            messageArea.className = 'message-area ' + type;
+            messageArea.className = 'message-area ' + type; // 클래스 추가시 공백 중요
         }
 
-        // 폼 초기화 함수
         function resetHuntingForm() {
-            huntingForm.reset(); // 폼 기본값으로 초기화
-            document.getElementById('session_date').value = new Date().toISOString().split('T')[0]; // 날짜는 오늘로
-             // 동적으로 추가된 아이템 행들 제거
+            huntingForm.reset();
+            document.getElementById('session_date').value = new Date().toISOString().split('T')[0];
             rareItemsContainer.innerHTML = '';
             consumableItemsContainer.innerHTML = '';
-            // 초기 아이템 행 다시 추가 (선택적)
-            // addRareItemRow();
-            // addConsumableRow();
-            showMessage(''); // 메시지 영역 초기화
+            showMessage('');
         }
-
-        // 삭제 함수 예시 (주석 처리됨)
-        /*
-        async function deleteHuntingSession(sessionId) {
-            if (!confirm(`ID ${sessionId} 사냥 기록을 정말 삭제하시겠습니까?`)) return;
-            try {
-                showMessage('삭제 중...', 'info');
-                // const response = await fetch(`/api/hunting-times/${sessionId}`, { method: 'DELETE' }); // '/api/hunting-sessions/' -> '/api/hunting-times/'
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({ detail: '삭제 중 오류 발생' }));
-                    throw new Error(errorData.detail || '기록 삭제 실패');
-                }
-                showMessage('기록이 삭제되었습니다.', 'success');
-                loadHuntingSessions();
-            } catch (error) {
-                showMessage(`삭제 오류: ${error.message}`, 'error');
-                console.error('Error deleting hunting session:', error);
-            }
-        }
-        */
     </script>
 </body>
+</html>

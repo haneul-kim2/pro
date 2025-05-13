@@ -98,127 +98,141 @@ def calculate_duration_minutes(start_dt: Optional[datetime.datetime], end_dt: Op
 # =========================================
 # Hunting Session CRUD
 # =========================================
-def get_hunting_session(db: Session, log_id: int): # 함수명 변경 get_hunting_session_log -> get_hunting_session
+def get_hunting_session(db: Session, log_id: int):
     return db.query(models.HuntingSessionLog).filter(models.HuntingSessionLog.id == log_id).first()
 
-def get_hunting_sessions(db: Session, skip: int = 0, limit: int = 100): # 함수명 변경 get_hunting_session_logs -> get_hunting_sessions
-    # session_date 필드 기준으로 정렬 (models.py 에 session_date 필드가 있다고 가정)
+def get_hunting_sessions(db: Session, skip: int = 0, limit: int = 100):
     return db.query(models.HuntingSessionLog).order_by(models.HuntingSessionLog.session_date.desc(), models.HuntingSessionLog.start_time.desc()).offset(skip).limit(limit).all()
 
-def create_hunting_session(db: Session, session: schemas.HuntingSessionCreate): # 함수명 변경 create_hunting_session_log -> create_hunting_session
+# === ✨ 아래 함수 전체를 교체해주세요 ✨ ===
+def create_hunting_session(db: Session, session: schemas.HuntingSessionCreate):
     start_dt: Union[datetime.datetime, None] = None
     end_dt: Union[datetime.datetime, None] = None
 
     try:
-        # models.py 에 session_date 가 있으므로 session.date 사용
-        if session.date and session.start_time:
+        if session.session_date and session.start_time:
             start_hour, start_minute = map(int, session.start_time.split(':'))
-            start_dt = datetime.datetime.combine(session.date, datetime.time(hour=start_hour, minute=start_minute))
-        if session.date and session.end_time:
+            start_dt = datetime.datetime.combine(session.session_date, datetime.time(hour=start_hour, minute=start_minute))
+        
+        if session.session_date and session.end_time:
             end_hour, end_minute = map(int, session.end_time.split(':'))
-            end_date_for_dt = session.date
+            end_date_for_dt = session.session_date 
             if start_dt and datetime.time(hour=end_hour, minute=end_minute) < start_dt.time():
                  end_date_for_dt += datetime.timedelta(days=1)
             end_dt = datetime.datetime.combine(end_date_for_dt, datetime.time(hour=end_hour, minute=end_minute))
     except Exception as e:
-        print(f"Warning: 시간 결합 중 오류 발생 - {e}")
+        print(f"Error during time combination in create_hunting_session: {e}")
 
     duration = calculate_duration_minutes(start_dt, end_dt)
 
-    calculated_gained_exp = calculate_gained_exp(
-        start_level=session.start_level,
-        start_exp_percentage=session.start_exp_percentage,
-        end_level=session.end_level,
-        end_exp_percentage=session.end_exp_percentage
-    )
+    calculated_gained_exp = None
+    # end_level은 JavaScript에서 start_level로 채워져서 넘어오거나, 사용자가 직접 입력.
+    # end_exp_percentage는 사용자가 입력 안하면 null로 넘어옴.
+    if session.end_level is not None and session.end_exp_percentage is not None:
+        calculated_gained_exp = calculate_gained_exp(
+            start_level=session.start_level,
+            start_exp_percentage=session.start_exp_percentage,
+            end_level=session.end_level, # 이제 null이 아님 (JS에서 처리)
+            end_exp_percentage=session.end_exp_percentage
+        )
+    # 만약 end_exp_percentage가 null인데 gained_exp를 0으로 하고 싶다면,
+    # calculate_gained_exp 함수에서 end_exp_percentage가 None일 때 0을 반환하도록 수정하거나,
+    # 여기서 calculated_gained_exp가 None이면 0으로 설정할 수 있습니다.
+    # 현재 calculate_gained_exp는 end_exp_percentage가 None이면 None을 반환합니다.
+    # DB의 gained_exp 컬럼은 nullable=True이므로 None 저장 가능.
 
-    # models.py의 필드명에 맞게 수정 (예: session_date, total_rare_item_value 등)
-    db_session = models.HuntingSessionLog(
-        session_date=session.date, # ✨ models.py의 session_date 필드 사용 ✨
-        map_name=session.map_name,
-        start_time=session.start_time, # ✨ 문자열 그대로 저장 (models.py가 String 타입이므로) ✨
-        end_time=session.end_time,     # ✨ 문자열 그대로 저장 (models.py가 String 타입이므로) ✨
-        duration_minutes=duration,
-        start_level=session.start_level,
-        start_exp_percentage=session.start_exp_percentage,
-        end_level=session.end_level,
-        end_exp_percentage=session.end_exp_percentage,
-        gained_exp=calculated_gained_exp,
-        start_meso=session.start_meso,
-        end_meso=session.end_meso,
-        sold_meso=getattr(session, 'sold_meso', 0), # sold_meso는 스키마에 없을 수 있음
-        coupon_15min_count=session.coupon_used_count, # 필드명 coupon_used_count -> coupon_15min_count
-        start_experience=session.start_experience,
-        end_experience=session.end_experience,
-        entry_fee=session.entry_fee,
-        hunting_meso_profit=session.hunting_meso_profit,
-        normal_item_profit=session.normal_item_profit,
-        total_rare_item_value=session.rare_items_value, # 필드명 rare_items_value -> total_rare_item_value
-        total_consumable_cost=session.consumable_cost, # 필드명 consumable_cost -> total_consumable_cost
-        total_consumable_gained_profit=session.consumable_gain_value, # 필드명 consumable_gain_value -> total_consumable_gained_profit
-        total_profit=session.total_profit,
-        net_profit=session.net_profit,
-        experience_profit=session.experience_profit,
-        base_experience_profit=session.base_experience_profit,
-        # character_name은 models.py에 없으므로 주석 처리 (또는 models.py에 추가)
-        rare_items_detail=session.rare_items_detail, # 스키마에 있는 필드명 사용
-        consumable_items_detail=session.consumable_items_detail # 스키마에 있는 필드명 사용
-    )
+    db_session_data = {
+        "session_date": session.session_date,
+        "map_name": session.map_name,
+        "start_time": session.start_time,
+        "end_time": session.end_time,
+        "duration_minutes": duration,
+        "start_level": session.start_level,
+        "start_exp_percentage": session.start_exp_percentage,
+        "end_level": session.end_level,
+        "end_exp_percentage": session.end_exp_percentage,
+        "gained_exp": calculated_gained_exp, # 계산된 값 사용
+        "start_meso": session.start_meso,
+        "end_meso": session.end_meso,
+        "sold_meso": session.sold_meso,
+        "coupon_15min_count": session.coupon_15min_count,
+        "entry_fee": session.entry_fee,
+        "hunting_meso_profit": session.hunting_meso_profit,
+        "normal_item_profit": session.normal_item_profit,
+        "total_rare_item_value": session.total_rare_item_value,
+        "total_consumable_cost": session.total_consumable_cost,
+        "total_consumable_gained_profit": session.total_consumable_gained_profit,
+        "total_profit": session.total_profit,
+        "net_profit": session.net_profit,
+        "rare_items_detail": session.rare_items_detail,
+        "consumable_items_detail": session.consumable_items_detail
+        # --- 🚨 아래 필드들은 schemas.py에서 제거했으므로, 여기서도 제거합니다. ---
+        # "start_experience": session.start_experience,
+        # "end_experience": session.end_experience,
+        # "experience_profit": session.experience_profit,
+        # "base_experience_profit": session.base_experience_profit,
+        # --- 🚨 제거 완료 🚨 ---
+    }
+    
+    db_session = models.HuntingSessionLog(**db_session_data)
     db.add(db_session)
     db.commit()
     db.refresh(db_session)
     return db_session
-
-# =========================================
-# Jjul Session CRUD (기존 내용 유지하되, 필드명 등 확인 필요)
-# =========================================
+# === ✨ 여기까지가 교체할 함수 전체입니다 ✨ ===
 def get_jjul_session(db: Session, log_id: int):
     return db.query(models.JjulSessionLog).filter(models.JjulSessionLog.id == log_id).first()
 
 def get_jjul_sessions(db: Session, skip: int = 0, limit: int = 100):
     return db.query(models.JjulSessionLog).order_by(models.JjulSessionLog.session_date.desc(), models.JjulSessionLog.start_time.desc()).offset(skip).limit(limit).all()
 
-def create_jjul_session(db: Session, session: schemas.JjulSessionCreate):
-    # 시간 처리 로직 추가 (HuntingSession과 유사하게)
+def create_jjul_session(db: Session, session: schemas.JjulSessionCreate): # session 타입은 JjulSessionCreate
     start_dt: Union[datetime.datetime, None] = None
     end_dt: Union[datetime.datetime, None] = None
     duration: Union[int, None] = None
+
     try:
-        if session.date and session.start_time:
+        # === ✨ 수정된 부분 시작 (사냥 세션과 동일한 로직 적용) ✨ ===
+        if session.session_date and session.start_time: # session_date 사용
             start_hour, start_minute = map(int, session.start_time.split(':'))
-            start_dt = datetime.datetime.combine(session.date, datetime.time(hour=start_hour, minute=start_minute))
-        if session.date and session.end_time:
+            start_dt = datetime.datetime.combine(session.session_date, datetime.time(hour=start_hour, minute=start_minute))
+        
+        if session.session_date and session.end_time: # session_date 사용
             end_hour, end_minute = map(int, session.end_time.split(':'))
-            end_date_for_dt = session.date
+            end_date_for_dt = session.session_date # session_date 사용
             if start_dt and datetime.time(hour=end_hour, minute=end_minute) < start_dt.time():
                  end_date_for_dt += datetime.timedelta(days=1)
             end_dt = datetime.datetime.combine(end_date_for_dt, datetime.time(hour=end_hour, minute=end_minute))
+        
         duration = calculate_duration_minutes(start_dt, end_dt)
+        # === ✨ 수정된 부분 끝 ✨ ===
     except Exception as e:
         print(f"Warning: Jjul 시간 결합 중 오류 발생 - {e}")
 
-    db_session = models.JjulSessionLog(
-        session_date=session.date, # models.py 필드명 사용
-        map_name=session.map_name,
-        start_time=session.start_time, # 문자열 그대로 저장 (models.py가 String 타입)
-        end_time=session.end_time,     # 문자열 그대로 저장 (models.py가 String 타입)
-        duration_minutes=duration,   # ✨ duration_minutes 추가 (models.py 에도 추가 필요) ✨
-        start_meso=session.start_meso,
-        end_meso=session.end_meso,
-        sold_meso=getattr(session, 'sold_meso', 0), # 스키마에 sold_meso가 있는지 확인
-        party_size=session.party_members_count, # 필드명 party_members_count -> party_size
-        price_per_person=session.price_per_member, # 필드명 price_per_member -> price_per_person
-        total_jjul_fee=session.total_jjul_fee,
-        total_rare_item_value=session.rare_items_value, # 필드명 rare_items_value -> total_rare_item_value
-        total_consumable_cost=session.consumable_cost,  # consumable_cost -> total_consumable_cost
-        total_consumable_gained_profit=session.consumable_gain_value, # consumable_gain_value -> total_consumable_gained_profit
-        normal_item_profit=session.normal_item_profit,
-        total_profit=session.total_profit,
-        net_profit=session.net_profit,
-        rare_items_detail=session.rare_items_detail,
-        consumable_items_detail=session.consumable_items_detail
-        # character_name은 models.py에 없으므로 주석 처리 (또는 models.py에 추가)
-    )
+    # DB 모델 필드명과 스키마 필드명 일치 확인
+    db_session_data = {
+        "session_date": session.session_date,
+        "map_name": session.map_name,
+        "start_time": session.start_time,
+        "end_time": session.end_time,
+        "duration_minutes": duration,
+        "start_meso": session.start_meso,
+        "end_meso": session.end_meso,
+        "sold_meso": session.sold_meso, # 스키마에 sold_meso가 있는지 확인 (있다면 그대로, 없다면 getattr 또는 기본값)
+        "party_size": session.party_size, # 스키마 필드명 확인 (JjulSessionBase에 party_size 있음)
+        "price_per_person": session.price_per_person, # 스키마 필드명 확인 (JjulSessionBase에 price_per_person 있음)
+        "total_jjul_fee": session.total_jjul_fee,
+        "total_rare_item_value": session.total_rare_item_value,
+        "total_consumable_cost": session.total_consumable_cost,
+        "total_consumable_gained_profit": session.total_consumable_gained_profit,
+        "normal_item_profit": session.normal_item_profit,
+        "total_profit": session.total_profit,
+        "net_profit": session.net_profit,
+        "rare_items_detail": session.rare_items_detail,
+        "consumable_items_detail": session.consumable_items_detail
+    }
+
+    db_session = models.JjulSessionLog(**db_session_data)
     db.add(db_session)
     db.commit()
     db.refresh(db_session)
@@ -576,22 +590,21 @@ def get_average_exp_per_hour_v2(db: Session) -> float:
 
 def get_daily_total_exp_v2(db: Session, start_date: Optional[datetime.date] = None, end_date: Optional[datetime.date] = None) -> Dict[str, int]:
     query = db.query(
-        func.date(models.HuntingSessionLog.start_time).label("date"), # ✨ start_time을 기준으로 날짜 추출 (models.py의 DateTime 필드 사용)✨
+        models.HuntingSessionLog.session_date.label("date"), # ✨ session_date 필드 사용 ✨
         func.sum(models.HuntingSessionLog.gained_exp).label("daily_total_exp")
     ).filter(
-        models.HuntingSessionLog.start_time.isnot(None), # ✨ start_time 필드 사용 ✨
+        models.HuntingSessionLog.session_date.isnot(None), # ✨ session_date 필드 사용 ✨
         models.HuntingSessionLog.gained_exp.isnot(None),
         models.HuntingSessionLog.gained_exp > 0
     )
     if start_date:
-        start_datetime = datetime.datetime.combine(start_date, datetime.time.min)
-        query = query.filter(models.HuntingSessionLog.start_time >= start_datetime) # ✨ start_time 필드 사용 ✨
+        query = query.filter(models.HuntingSessionLog.session_date >= start_date) # ✨ session_date 필드 사용 ✨
     if end_date:
-        end_datetime = datetime.datetime.combine(end_date + datetime.timedelta(days=1), datetime.time.min)
-        query = query.filter(models.HuntingSessionLog.start_time < end_datetime) # ✨ start_time 필드 사용 ✨
+        query = query.filter(models.HuntingSessionLog.session_date <= end_date) # ✨ session_date 필드 사용 ✨ # end_date는 포함해야 하므로 <=
 
-    query = query.group_by(func.date(models.HuntingSessionLog.start_time)).order_by(func.date(models.HuntingSessionLog.start_time)) # ✨ start_time 필드 사용 ✨
+    query = query.group_by(models.HuntingSessionLog.session_date).order_by(models.HuntingSessionLog.session_date) # ✨ session_date 필드 사용 ✨
     results = query.all()
+    # 결과의 date는 이미 datetime.date 객체이므로 .isoformat() 사용 가능
     daily_exp_dict = {result.date.isoformat(): (result.daily_total_exp if result.daily_total_exp is not None else 0) for result in results if result.date}
     return daily_exp_dict
 # =======================================================================

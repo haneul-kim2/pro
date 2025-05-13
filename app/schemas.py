@@ -10,50 +10,49 @@ from datetime import date # date는 이미 있음
 # Hunting Session Schemas
 # =========================================
 class HuntingSessionBase(BaseModel):
-    # character_name: str # models.py에 character_name이 있다면 주석 해제
-    session_date: date # models.py 필드명 session_date 사용 (스키마에서는 date로 받아도 무방)
+    session_date: date
     map_name: str
-    start_time: Union[str, None] = None # HH:MM 형식 문자열
-    end_time: Union[str, None] = None   # HH:MM 형식 문자열
-    # duration_minutes: Optional[int] = None # ✨ 조회 시 사용, 생성 시에는 자동 계산되므로 Base에선 제외 가능 ✨
+    start_time: Union[str, None] = None
+    end_time: Union[str, None] = None
 
     start_level: int
-    start_exp_percentage: float = Field(..., ge=0.0, le=100.0) # 필수, 0~100
+    start_exp_percentage: float = Field(..., ge=0.0, le=100.0)
     end_level: Optional[int] = None
-    end_exp_percentage: Optional[float] = Field(None, ge=0.0, le=100.0) # 선택, 0~100
+    end_exp_percentage: Optional[float] = Field(None, ge=0.0, le=100.0)
 
     start_meso: int = 0
     end_meso: int = 0
-    sold_meso: int = 0 # models.py 필드명 사용
-    coupon_15min_count: int = 0 # models.py 필드명 사용 (coupon_used_count -> coupon_15min_count)
-    start_experience: float = 0 # models.py 타입 Float
-    end_experience: float = 0   # models.py 타입 Float
+    sold_meso: int = 0
+    coupon_15min_count: int = 0
     entry_fee: int = 0
-    # 아래 수익/비용 필드들은 스키마에서 직접 받기보다, create 시 계산하는 것이 좋을 수 있음
-    # 또는 사용자가 직접 입력하도록 둘 수도 있음 (현재 로직 유지)
-    hunting_meso_profit: int = 0
+    hunting_meso_profit: int = 0 # 이 필드들은 계산 결과일 수도, 직접 입력일 수도 있음 (현재는 스키마에 포함)
     normal_item_profit: int = 0
-    total_rare_item_value: int = 0 # models.py 필드명 사용
-    total_consumable_cost: int = 0 # models.py 필드명 사용
-    total_consumable_gained_profit: int = 0 # models.py 필드명 사용
+    total_rare_item_value: int = 0
+    total_consumable_cost: int = 0
+    total_consumable_gained_profit: int = 0
     total_profit: int = 0
     net_profit: int = 0
-    experience_profit: float = 0   # models.py 타입 Float
-    base_experience_profit: float = 0 # models.py 타입 Float
     rare_items_detail: Union[str, None] = None
     consumable_items_detail: Union[str, None] = None
+    
+    # --- 🚨 아래 필드들은 gained_exp로 대체되므로 확실히 제거 또는 주석 처리합니다. 🚨 ---
+    # start_experience: float = 0
+    # end_experience: float = 0
+    # experience_profit: float = 0
+    # base_experience_profit: float = 0
+    # --- 🚨 제거 또는 주석 처리 완료 🚨 ---
 
-
+# HuntingSessionCreate 와 HuntingSession 은 이전과 동일하게 유지 (created_at 필드 등 포함)
 class HuntingSessionCreate(HuntingSessionBase):
-    # Base의 모든 필드를 상속받아 사용
     pass
 
-class HuntingSession(HuntingSessionBase): # 조회용 스키마 (기존 HuntingSessionLog 역할)
+class HuntingSession(HuntingSessionBase):
     id: int
-    duration_minutes: Optional[int] = None # ✨ 추가된 필드 (조회 시 필요) ✨
-    gained_exp: Optional[int] = None       # ✨ 추가된 필드 (조회 시 필요) ✨
-
-    model_config = ConfigDict(from_attributes=True) # Pydantic V2
+    duration_minutes: Optional[int] = None
+    gained_exp: Optional[int] = None # 이 필드는 DB에서 읽어온 계산된 경험치
+    created_at: Optional[datetime.datetime] = None
+    
+    model_config = ConfigDict(from_attributes=True)
 
 
 # =========================================
@@ -88,6 +87,7 @@ class JjulSessionCreate(JjulSessionBase):
 class JjulSession(JjulSessionBase): # 조회용 스키마
     id: int
     duration_minutes: Optional[int] = None # ✨ 추가된 필드 (조회 시 필요) ✨
+    created_at: Optional[datetime.datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
 
