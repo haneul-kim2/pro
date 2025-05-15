@@ -7,6 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 import os
+import datetime # 파일 상단에 추가
 
 from app import crud, models, schemas, database
 from app.routers import hunting_sessions, jjul_sessions, meso_sales, statistics
@@ -99,5 +100,36 @@ async def statistics_weekday_page_ui(request: Request): # 함수 이름 변경
 @app.get("/statistics/experience/", response_class=HTMLResponse, name="statistics_experience", tags=["UI Pages"]) # 이름 간결화 및 경로에 / 추가
 async def statistics_experience_page_ui(request: Request): # 함수 이름 변경
     return templates.TemplateResponse("statistics_experience.html", {"request": request})
+# main.py 에 추가
+@app.get("/statistics/experience/weekday/", response_class=HTMLResponse, name="statistics_experience_weekday", tags=["UI Pages - Experience Statistics"])
+async def statistics_experience_weekday_page_ui(request: Request):
+    return templates.TemplateResponse("statistics_experience_weekday.html", {"request": request})
+# --- 경험치 통계 관련 라우트 ---
+@app.get("/statistics/experience/", response_class=HTMLResponse, name="statistics_experience_daily", tags=["UI Pages - Experience Statistics"]) # name 변경
+async def statistics_experience_daily_page_ui(request: Request): # 함수 이름도 일관성 있게 변경 가능 (선택 사항)
+    return templates.TemplateResponse("statistics_experience.html", {"request": request}) # 이 페이지가 '일별 경험치 요약' 역할
 
+@app.get("/statistics/experience/weekday/", response_class=HTMLResponse, name="statistics_experience_weekday", tags=["UI Pages - Experience Statistics"])
+async def statistics_experience_weekday_page_ui(request: Request):
+    return templates.TemplateResponse("statistics_experience_weekday.html", {"request": request})
+
+# main.py 에 있는 기존 임시 라우트를 아래와 같이 수정
+@app.get("/statistics/experience/map/", response_class=HTMLResponse, name="statistics_experience_map", tags=["UI Pages - Experience Statistics"])
+async def statistics_experience_map_page_ui(request: Request):
+    return templates.TemplateResponse("statistics_experience_map.html", {"request": request}) # 실제 파일명으로 변경
 # ================== UI 페이지 라우트 정의 끝 ==================
+@app.get("/info", response_class=HTMLResponse, name="info_page", tags=["UI Pages"])
+async def information_page(request: Request):
+    creator_info = {
+        "name": "김하늘",
+        "discord_id": "gomsky",
+        "youtube_name": "https://www.youtube.com/@rhahanul", # 이 부분을 클릭해서 이스터에그 발동
+        "account_number": "카카오뱅크 3333-03-1751818",
+        "nickname": "의문의돌맹이"  # ✨ 메랜 닉네임 추가 ✨
+    }
+    current_year = datetime.datetime.now().year
+    return templates.TemplateResponse("info.html", {
+        "request": request,
+        "creator": creator_info,
+        "current_year": current_year
+    })

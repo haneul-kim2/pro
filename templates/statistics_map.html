@@ -5,10 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>맵별 요약 통계</title>
     <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <style>
-        /* 스타일은 이전 답변과 동일하게 유지 (필요시 style.css로 이동) */
+        /* 기본 스타일 (다른 페이지와 유사) */
         body { font-family: 'Arial', sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; color: #333; display: flex; flex-direction: column; min-height: 100vh; }
-        header { background: #333; color: #fff; padding: 1rem 0; text-align: center; }
+        header { background: #333; color: #fff; padding: 1.8rem 0; text-align: center; }
         header h1 { margin: 0; font-size: 1.8rem; }
         nav { background: #444; padding: 0.5rem 0; }
         nav ul { padding: 0; list-style: none; text-align: center; margin: 0; }
@@ -26,7 +27,7 @@
         h2 { color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 0; margin-bottom: 20px; }
         .filters { background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin-bottom: 30px; display: flex; gap: 15px; align-items: center; flex-wrap: wrap; border: 1px solid #eee;}
         .filters label { font-weight: bold; margin-right: 5px; color: #555; }
-        .filters input[type="date"] { padding: 8px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem; }
+        .filters input[type="text"] { padding: 8px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem; } /* type="date" -> type="text" */
         .filters button { background-color: #5bc0de; color: white; padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer; transition: background-color 0.3s ease; }
         .filters button:hover { background-color: #31b0d5; }
         .table-container { overflow-x: auto; margin-top: 20px; }
@@ -39,54 +40,50 @@
         td:not(:first-child) { text-align: right; }
         .message-area { padding: 15px; margin-bottom: 20px; border-radius: 4px; border: 1px solid transparent; }
         .message-area.error { background-color: #f2dede; color: #a94442; border-color: #ebccd1; }
+        .message-area.info { background-color: #d9edf7; color: #31708f; border-color: #bce8f1; }
         .message-area:empty { display: none; }
     </style>
 </head>
 <body>
     <header>
-        <h1>메이플스토리 수익 기록 웹</h1>
+        <h1>메랜통계</h1>
     </header>
 
-  <!-- 네비게이션 바 - 순서 및 이름 변경 -->
-<nav>
-    <ul>
-        <!-- 1. 홈 -->
-        <li><a href="{{ url_for('home') }}">홈</a></li> <!-- 'active' 클래스는 페이지별로 다를 수 있으니 일단 빼고 복사하거나, 나중에 각 페이지에 맞게 수정 -->
+    <nav>
+        <ul>
+            <li><a href="{{ url_for('home') }}" class="{{ 'active' if request.url.path == url_for('home') else '' }}">홈</a></li>
+            <li><a href="{{ url_for('list_and_add_hunting_sessions') }}" class="{{ 'active' if 'hunting-sessions' in request.url.path else '' }}">사냥</a></li>
+            <li><a href="{{ url_for('list_and_add_jjul_sessions') }}" class="{{ 'active' if 'jjul-sessions' in request.url.path else '' }}">쩔</a></li>
+            
+            <li class="dropdown">
+                <a href="javascript:void(0)" class="dropbtn {{ 'active' if request.url.path.startswith((url_for('statistics_experience_daily')|string).rsplit('/', 1)[0]) else '' }}">경험치 통계</a>
+                <div class="dropdown-content">
+                    <a href="{{ url_for('statistics_experience_daily') }}" class="{{ 'active' if request.url.path == url_for('statistics_experience_daily') else '' }}">일별 경험치</a>
+                    <a href="{{ url_for('statistics_experience_weekday') }}" class="{{ 'active' if request.url.path == url_for('statistics_experience_weekday') else '' }}">요일별 경험치</a>
+                    <a href="{{ url_for('statistics_experience_map') }}" class="{{ 'active' if request.url.path == url_for('statistics_experience_map') else '' }}">맵별 경험치</a>
+                    </div>
+            </li>
 
-        <!-- 2. 사냥 -->
-        <li><a href="{{ url_for('list_and_add_hunting_sessions') }}">사냥</a></li>
-
-        <!-- 3. 쩔 -->
-        <li><a href="{{ url_for('list_and_add_jjul_sessions') }}">쩔</a></li>
-
-        <!-- 4. 경험치 통계 (신규 추가) -->
-        <li><a href="{{ url_for('statistics_experience') }}">경험치 통계</a></li>
-
-        <!-- 5. 통계 (드롭다운) -->
-        <li class="dropdown">
-            <a href="javascript:void(0)" class="dropbtn">통계</a>
-            <div class="dropdown-content">
-                <a href="{{url_for('statistics_daily') }}">일별 요약</a>
-                <a href="{{ url_for('statistics_map') }}">맵별 요약</a>
-                <a href="{{ url_for('statistics_weekday') }}">요일별 요약</a>
-            </div>
-        </li>
-
-        <!-- 6. 메소 판매 기록 (이름 변경) -->
-        <li><a href="{{ url_for('list_and_add_meso_sales') }}">메소 판매 기록</a></li>
-    </ul>
-</nav>
-    <!-- 네비게이션 바 끝 -->
+            <li class="dropdown">
+                <a href="javascript:void(0)" class="dropbtn {{ 'active' if request.url.path.startswith((url_for('statistics_daily')|string).rsplit('/', 1)[0]) and not request.url.path.startswith((url_for('statistics_experience_daily')|string).rsplit('/', 1)[0]) else '' }}">메소 통계</a>
+                <div class="dropdown-content">
+                    <a href="{{ url_for('statistics_daily') }}" class="{{ 'active' if request.url.path == url_for('statistics_daily') else '' }}">일별 메소</a>
+                    <a href="{{ url_for('statistics_weekday') }}" class="{{ 'active' if request.url.path == url_for('statistics_weekday') else '' }}">요일별 메소</a>
+                    <a href="{{ url_for('statistics_map') }}" class="{{ 'active' if request.url.path == url_for('statistics_map') else '' }}">맵별 메소</a>
+                </div>
+            </li>
+            <li><a href="{{ url_for('list_and_add_meso_sales') }}" class="{{ 'active' if 'meso-sales' in request.url.path else '' }}">쌀먹 장부</a></li>
+            <li><a href="{{ url_for('info_page') }}" class="active">정보</a></li>
+        </ul>
+    </nav>
 
     <main class="container">
         <h2>맵별 요약 통계</h2>
         <div id="message-area-map" class="message-area"></div>
         <div class="filters">
-            <label for="startDate">시작 날짜:</label>
-            <input type="date" id="startDate">
-            <label for="endDate">종료 날짜:</label>
-            <input type="date" id="endDate">
-            <button onclick="loadMapStats()">조회</button>
+            <label for="startDate_fp_map">시작 날짜:</label>
+            <input type="text" id="startDate_fp_map" placeholder="날짜 선택..."> <label for="endDate_fp_map">종료 날짜:</label>
+            <input type="text" id="endDate_fp_map" placeholder="날짜 선택...">   <button onclick="loadMapStats()">조회</button>
         </div>
         <h3>상세 데이터</h3>
         <div class="table-container">
@@ -95,8 +92,7 @@
                     <tr>
                         <th>맵명</th> <th>사냥횟수</th> <th>쩔횟수</th> <th>총 사냥수익</th>
                         <th>총 쩔수익</th> <th>총 고가템수익</th> <th>총 소모템획득수익</th>
-                        <th>평균 사냥 순수익</th> <th>평균 쩔 순수익</th>
-                    </tr>
+                        <th>평균 사냥수익</th> <th>평균 쩔수익</th>   </tr>
                 </thead>
                 <tbody>
                     <tr> <td colspan="9" style="text-align:center;">데이터를 조회해주세요.</td> </tr>
@@ -108,13 +104,17 @@
     </main>
 
     <footer>
-        <p>&copy; 2025 의문의돌맹이. All rights reserved.</p>
+        <p>&copy; 2025 김하늘 (의문의돌맹이). All rights reserved.</p>
     </footer>
 
-    <script>
-        // JavaScript 코드는 이전 답변과 동일하게 유지 (API URL 변경 없음)
-        const startDateInput = document.getElementById('startDate');
-        const endDateInput = document.getElementById('endDate');
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://npmcdn.com/flatpickr/dist/l10n/ko.js"></script> <script>
+        // ✨ Flatpickr 인스턴스 저장용 변수 ✨
+        let startDateFlatpickrMap = null;
+        let endDateFlatpickrMap = null;
+
+        // const startDateInput = document.getElementById('startDate'); // 이전 ID, 이제 사용 안 함
+        // const endDateInput = document.getElementById('endDate');   // 이전 ID, 이제 사용 안 함
         const mapTableBody = document.getElementById('mapStatsTable').getElementsByTagName('tbody')[0];
         const mapTableFoot = document.getElementById('mapStatsTable').getElementsByTagName('tfoot')[0];
         const messageArea = document.getElementById('message-area-map');
@@ -122,31 +122,55 @@
         document.addEventListener('DOMContentLoaded', () => {
             const today = new Date();
             const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-            endDateInput.value = today.toISOString().split('T')[0];
-            startDateInput.value = firstDayOfMonth.toISOString().split('T')[0];
+
+            // ✨ Flatpickr 초기화 ✨
+            startDateFlatpickrMap = flatpickr("#startDate_fp_map", { // 새 ID 사용
+                dateFormat: "Y-m-d",
+                defaultDate: firstDayOfMonth,
+                locale: "ko"
+            });
+            endDateFlatpickrMap = flatpickr("#endDate_fp_map", { // 새 ID 사용
+                dateFormat: "Y-m-d",
+                defaultDate: today,
+                locale: "ko"
+            });
+            
+            console.log("Flatpickr initialized for map stats filters.");
             loadMapStats();
         });
 
         async function loadMapStats() {
-            const startDate = startDateInput.value;
-            const endDate = endDateInput.value;
+            // ✨ Flatpickr 인스턴스에서 날짜 값 가져오기 ✨
+            const startDate = startDateFlatpickrMap.input.value; 
+            const endDate = endDateFlatpickrMap.input.value;
+
             if (!startDate || !endDate) { showMessage('시작 날짜와 종료 날짜를 모두 선택해주세요.', 'error'); return; }
             if (startDate > endDate) { showMessage('시작 날짜는 종료 날짜보다 이전이어야 합니다.', 'error'); return; }
-            showMessage('');
+            
+            showMessage('데이터를 불러오는 중...', 'info');
             mapTableBody.innerHTML = '<tr><td colspan="9" style="text-align:center;">데이터를 불러오는 중...</td></tr>';
             mapTableFoot.innerHTML = '';
-            const apiUrl = `/api/statistics/map?start_date=${startDate}&end_date=${endDate}`; // API URL 유지
+            
+            // API 경로는 이전에 점검한 /api/statistics/summary/map 또는 /api/statistics/map 을 사용합니다.
+            // 여기서는 /summary/map 으로 가정합니다. (main.py 설정에 따라 달라짐)
+            // 만약 /api/statistics/map 이라면 아래 URL을 수정해야 합니다.
+            const apiUrl = `/api/statistics/summary/map?start_date=${startDate}&end_date=${endDate}`; 
+            console.log("Map Stats - Constructed API URL:", apiUrl);
+            
             try {
                 const response = await fetch(apiUrl);
                 if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({ detail: '데이터 로드 실패' }));
+                    const errorData = await response.json().catch(() => ({ detail: '데이터 로드 실패 (서버 응답 파싱 불가)' }));
                     throw new Error(errorData.detail || `서버 응답 오류: ${response.status}`);
                 }
-                const data = await response.json();
-                renderMapTable(data);
+                const dataResponse = await response.json();
+                const mapData = dataResponse.summaries; // API 응답 구조에 맞춰 summaries 사용
+
+                renderMapTable(mapData);
+                showMessage(''); // 성공 시 메시지 클리어
             } catch (error) {
                 showMessage(`오류: ${error.message}`, 'error');
-                mapTableBody.innerHTML = `<tr><td colspan="9" style="text-align:center; color: red;">데이터 로드 실패</td></tr>`;
+                mapTableBody.innerHTML = `<tr><td colspan="9" style="text-align:center; color: red;">데이터 로드 실패: ${error.message}</td></tr>`;
                 console.error('Error loading map statistics:', error);
             }
         }
@@ -158,45 +182,47 @@
                 mapTableBody.innerHTML = '<tr><td colspan="9" style="text-align:center;">해당 기간의 데이터가 없습니다.</td></tr>';
                 return;
             }
-            data.sort((a, b) => a.map_name.localeCompare(b.map_name));
+            data.sort((a, b) => (a.map_name || "").localeCompare(b.map_name || ""));
+            
+            let totals = { map_name: '전체 합계', hunt_count: 0, jjul_count: 0, total_hunt_profit: 0, total_jjul_profit: 0, total_rare_item_profit: 0, total_consumable_gained_profit: 0 };
+
             data.forEach(item => {
                 const row = mapTableBody.insertRow();
                 row.insertCell().textContent = item.map_name || 'N/A';
-                row.insertCell().textContent = item.hunting_count || 0;
-                row.insertCell().textContent = item.jjul_count || 0;
-                row.insertCell().textContent = (item.total_hunting_profit || 0).toLocaleString();
+                row.insertCell().textContent = item.hunt_count || 0; // 스키마 필드명: hunt_count
+                row.insertCell().textContent = item.jjul_count || 0; // 스키마 필드명: jjul_count
+                row.insertCell().textContent = (item.total_hunt_profit || 0).toLocaleString();
                 row.insertCell().textContent = (item.total_jjul_profit || 0).toLocaleString();
                 row.insertCell().textContent = (item.total_rare_item_profit || 0).toLocaleString();
                 row.insertCell().textContent = (item.total_consumable_gained_profit || 0).toLocaleString();
-                row.insertCell().textContent = (item.avg_hunting_net_profit || 0).toLocaleString();
-                row.insertCell().textContent = (item.avg_jjul_net_profit || 0).toLocaleString();
+                row.insertCell().textContent = (item.average_hunt_profit || 0).toLocaleString(); // 스키마 필드명: average_hunt_profit
+                row.insertCell().textContent = (item.average_jjul_profit || 0).toLocaleString(); // 스키마 필드명: average_jjul_profit
+
+                totals.hunt_count += item.hunt_count || 0;
+                totals.jjul_count += item.jjul_count || 0;
+                totals.total_hunt_profit += item.total_hunt_profit || 0;
+                totals.total_jjul_profit += item.total_jjul_profit || 0;
+                totals.total_rare_item_profit += item.total_rare_item_profit || 0;
+                totals.total_consumable_gained_profit += item.total_consumable_gained_profit || 0;
             });
-            const totals = data.reduce((acc, item) => {
-                acc.hunting_count += item.hunting_count || 0;
-                acc.jjul_count += item.jjul_count || 0;
-                acc.total_hunting_profit += item.total_hunting_profit || 0;
-                acc.total_jjul_profit += item.total_jjul_profit || 0;
-                acc.total_rare_item_profit += item.total_rare_item_profit || 0;
-                acc.total_consumable_gained_profit += item.total_consumable_gained_profit || 0;
-                return acc;
-            }, { hunting_count: 0, jjul_count: 0, total_hunting_profit: 0, total_jjul_profit: 0, total_rare_item_profit: 0, total_consumable_gained_profit: 0 });
+
             const footerRow = mapTableFoot.insertRow();
             footerRow.style.fontWeight = 'bold';
             footerRow.style.backgroundColor = '#f8f8f8';
-            footerRow.insertCell().textContent = '전체 합계';
-            footerRow.insertCell().textContent = totals.hunting_count;
-            footerRow.insertCell().textContent = totals.jjul_count;
-            footerRow.insertCell().textContent = totals.total_hunting_profit.toLocaleString();
-            footerRow.insertCell().textContent = totals.total_jjul_profit.toLocaleString();
-            footerRow.insertCell().textContent = totals.total_rare_item_profit.toLocaleString();
-            footerRow.insertCell().textContent = totals.total_consumable_gained_profit.toLocaleString();
-            footerRow.insertCell().textContent = '';
-            footerRow.insertCell().textContent = '';
+            const footerKeys = ['map_name', 'hunt_count', 'jjul_count', 'total_hunt_profit', 'total_jjul_profit', 'total_rare_item_profit', 'total_consumable_gained_profit'];
+            for (const key of footerKeys) {
+                 footerRow.insertCell().textContent = typeof totals[key] === 'string' ? totals[key] : (totals[key] || 0).toLocaleString();
+            }
+            footerRow.insertCell().textContent = ''; // 평균 사냥수익 합계는 의미 없음
+            footerRow.insertCell().textContent = ''; // 평균 쩔수익 합계는 의미 없음
         }
 
         function showMessage(message, type = 'info') {
+            if (!messageArea) return;
             messageArea.textContent = message;
             messageArea.className = 'message-area ' + type;
+            messageArea.style.display = message ? 'block' : 'none';
         }
     </script>
 </body>
+</html>

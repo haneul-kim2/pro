@@ -3,19 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>사냥 기록</title> <!-- '타임' 제거 -->
+    <title>쌀먹 장부</title>
     <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <style>
-        /* 스타일은 이전 답변과 동일하게 유지 (필요시 style.css로 이동) */
+        /* 기본 스타일 (다른 페이지와 유사, 필요시 style.css로 통합) */
         body { font-family: 'Arial', sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; color: #333; display: flex; flex-direction: column; min-height: 100vh; }
-        header { background: #333; color: #fff; padding: 1rem 0; text-align: center; }
+        header { background: #333; color: #fff; padding: 1.8rem 0; text-align: center; }
         header h1 { margin: 0; font-size: 1.8rem; }
         nav { background: #444; padding: 0.5rem 0; }
         nav ul { padding: 0; list-style: none; text-align: center; margin: 0; }
         nav ul li { display: inline-block; margin: 0 5px; }
         nav ul li a { text-decoration: none; color: #fff; padding: 10px 15px; display: inline-block; border-radius: 4px; transition: background-color 0.3s ease; }
         nav ul li a:hover, nav ul li a.active { background-color: #555; }
-        main.container { flex-grow: 1; width: 90%; max-width: 1200px; margin: 20px auto; padding: 20px; background-color: #fff; box-shadow: 0 0 10px rgba(0,0,0,0.1); border-radius: 8px; }
+        main.container { flex-grow: 1; width: 90%; max-width: 900px; margin: 20px auto; padding: 20px; background-color: #fff; box-shadow: 0 0 10px rgba(0,0,0,0.1); border-radius: 8px; }
         footer { background: #333; color: #fff; text-align: center; padding: 1rem 0; margin-top: auto; width: 100%; }
         nav ul li.dropdown { position: relative; display: inline-block; }
         nav ul li.dropdown .dropbtn { cursor: default; }
@@ -26,325 +27,358 @@
         h2, h3 { color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 30px; margin-bottom: 20px; }
         h2:first-of-type { margin-top: 0; }
         .form-section { margin-bottom: 30px; padding: 20px; background-color: #f9f9f9; border-radius: 5px; border: 1px solid #eee; }
-        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px 20px; }
+        .form-grid { display: grid; grid-template-columns: 1fr; gap: 15px; }
+        @media (min-width: 600px) { .form-grid { grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); } }
         .form-group { margin-bottom: 0; }
         .form-group label { display: block; margin-bottom: 8px; font-weight: bold; color: #555; font-size: 0.9rem;}
-        .form-group input[type="text"], .form-group input[type="date"], .form-group input[type="number"], .form-group input[type="time"], .form-group select, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 0.95rem; }
-        .form-group input:focus, .form-group textarea:focus, .form-group select:focus { border-color: #5cb85c; outline: none; box-shadow: 0 0 5px rgba(92, 184, 92, 0.5); }
-        .item-list-section { margin-top: 20px; }
-        .item-row { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; padding: 10px; background-color: #fdfdfd; border-radius: 4px; border: 1px solid #eee;}
-        .item-row label { margin-bottom: 0; font-size: 0.85rem; color: #666; min-width: 80px; text-align: right; }
-        .item-row input[type="text"], .item-row input[type="number"] { flex-grow: 1; padding: 8px; font-size: 0.9rem; }
-        .item-row .item-name { flex-basis: 40%; }
-        .item-row .item-value { flex-basis: 25%; }
-        .item-row .item-qty { flex-basis: 15%; }
-        .item-row button.remove-item-btn { background-color: #d9534f; color: white; border: none; padding: 5px 8px; font-size: 0.8rem; border-radius: 4px; cursor: pointer; transition: background-color 0.3s ease; line-height: 1; }
-        .item-row button.remove-item-btn:hover { background-color: #c9302c; }
-        button.add-item-btn { background-color: #5bc0de; color: white; padding: 8px 12px; font-size: 0.9rem; border:none; border-radius: 4px; cursor:pointer; margin-top: 10px; transition: background-color 0.3s ease; }
-        button.add-item-btn:hover { background-color: #31b0d5; }
+        .form-group input[type="text"], .form-group input[type="date"], .form-group input[type="number"] { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 0.95rem; }
+        .form-group input:focus { border-color: #5cb85c; outline: none; box-shadow: 0 0 5px rgba(92, 184, 92, 0.5); }
+        .calculated-value { font-size: 1.1rem; font-weight: bold; color: #28a745; margin-top: 5px; padding: 10px; background-color: #e9ecef; border-radius: 4px;} /* 총 판매액 스타일 개선 */
         .button-group { margin-top: 30px; text-align: right; padding-top: 20px; border-top: 1px solid #eee; }
-        button[type="submit"] { background-color: #5cb85c; }
+        button[type="submit"] { background-color: #5cb85c; color:white; padding: 10px 15px; border:none; border-radius:4px; cursor:pointer; font-size:1rem; }
         button[type="submit"]:hover { background-color: #4cae4c; }
-        button.secondary { background-color: #f0ad4e; margin-left: 10px; }
+        button.secondary { background-color: #f0ad4e; color:white; padding: 10px 15px; border:none; border-radius:4px; cursor:pointer; font-size:1rem; margin-left: 10px; }
         button.secondary:hover { background-color: #ec971f; }
         .message-area { padding: 15px; margin-bottom: 20px; border-radius: 4px; border: 1px solid transparent; }
         .message-area.success { background-color: #dff0d8; color: #3c763d; border-color: #d6e9c6; }
         .message-area.error { background-color: #f2dede; color: #a94442; border-color: #ebccd1; }
+        .message-area.info { background-color: #d9edf7; color: #31708f; border-color: #bce8f1; }
         .message-area:empty { display: none; }
-        .table-container { overflow-x: auto; margin-top: 20px; }
-        .table-container table { min-width: 1200px; }
+        .table-container { overflow-x: auto; /* margin-top 제거 또는 조정 */ }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
         th, td { border: 1px solid #e0e0e0; padding: 10px 12px; text-align: left; vertical-align: middle; font-size: 0.9rem; }
         th { background-color: #f8f8f8; font-weight: bold; color: #333; text-transform: uppercase; font-size: 0.85rem; }
         tbody tr:nth-child(even) { background-color: #fdfdfd; }
         tbody tr:hover { background-color: #f0f0f0; }
         td { color: #555; }
-        td:nth-child(n+5):nth-child(-n+10), td:nth-child(n+12) { text-align: right; }
-        td:nth-child(11), td:nth-child(12) { text-align: right; }
+        td:nth-child(2), td:nth-child(3), td:nth-child(4) { text-align: right; } /* 가격, 판매량, 총판매액 오른쪽 정렬 */
+        /* 삭제 버튼 스타일 */
+        .remove-item-btn { background-color: #d9534f; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 0.85em; }
+        .remove-item-btn:hover { background-color: #c9302c; }
+        .action-button { /* 모든 기록 삭제 버튼에도 적용될 수 있도록 */
+            background-color: #d9534f; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 0.85em;
+        }
+        .action-button:hover { background-color: #c9302c; }
+        .table-controls { /* "모든 기록 삭제" 버튼을 감싸는 div에 적용 */
+            text-align: right;
+            margin-bottom: 10px; /* 테이블과의 간격 */
+        }
     </style>
 </head>
 <body>
     <header>
-        <h1>메이플스토리 수익 기록 웹</h1>
+        <h1>메랜통계</h1>
     </header>
 
-   <!-- 네비게이션 바 - 순서 및 이름 변경 -->
-<nav>
-    <ul>
-        <!-- 1. 홈 -->
-        <li><a href="{{ url_for('home') }}">홈</a></li> <!-- 'active' 클래스는 페이지별로 다를 수 있으니 일단 빼고 복사하거나, 나중에 각 페이지에 맞게 수정 -->
+    <nav>
+        <ul>
+            <li><a href="{{ url_for('home') }}" class="{{ 'active' if request.url.path == url_for('home') else '' }}">홈</a></li>
+            <li><a href="{{ url_for('list_and_add_hunting_sessions') }}" class="{{ 'active' if 'hunting-sessions' in request.url.path else '' }}">사냥</a></li>
+            <li><a href="{{ url_for('list_and_add_jjul_sessions') }}" class="{{ 'active' if 'jjul-sessions' in request.url.path else '' }}">쩔</a></li>
+            
+            <li class="dropdown">
+                <a href="javascript:void(0)" class="dropbtn {{ 'active' if request.url.path.startswith((url_for('statistics_experience_daily')|string).rsplit('/', 1)[0]) else '' }}">경험치 통계</a>
+                <div class="dropdown-content">
+                    <a href="{{ url_for('statistics_experience_daily') }}" class="{{ 'active' if request.url.path == url_for('statistics_experience_daily') else '' }}">일별 경험치</a>
+                    <a href="{{ url_for('statistics_experience_weekday') }}" class="{{ 'active' if request.url.path == url_for('statistics_experience_weekday') else '' }}">요일별 경험치</a>
+                    <a href="{{ url_for('statistics_experience_map') }}" class="{{ 'active' if request.url.path == url_for('statistics_experience_map') else '' }}">맵별 경험치</a>
+                    </div>
+            </li>
 
-        <!-- 2. 사냥 -->
-        <li><a href="{{ url_for('list_and_add_hunting_sessions') }}">사냥</a></li>
-
-        <!-- 3. 쩔 -->
-        <li><a href="{{ url_for('list_and_add_jjul_sessions') }}">쩔</a></li>
-
-        <!-- 4. 경험치 통계 (신규 추가) -->
-        <li><a href="{{ url_for('statistics_experience') }}">경험치 통계</a></li>
-
-        <!-- 5. 통계 (드롭다운) -->
-        <li class="dropdown">
-            <a href="javascript:void(0)" class="dropbtn">통계</a>
-            <div class="dropdown-content">
-                <a href="{{url_for('statistics_daily') }}">일별 요약</a>
-                <a href="{{ url_for('statistics_map') }}">맵별 요약</a>
-                <a href="{{ url_for('statistics_weekday') }}">요일별 요약</a>
-            </div>
-        </li>
-
-        <!-- 6. 메소 판매 기록 (이름 변경) -->
-        <li><a href="{{ url_for('list_and_add_meso_sales') }}">메소 판매 기록</a></li>
-    </ul>
-</nav>
-    <!-- 네비게이션 바 끝 -->
+            <li class="dropdown">
+                <a href="javascript:void(0)" class="dropbtn {{ 'active' if request.url.path.startswith((url_for('statistics_daily')|string).rsplit('/', 1)[0]) and not request.url.path.startswith((url_for('statistics_experience_daily')|string).rsplit('/', 1)[0]) else '' }}">메소 통계</a>
+                <div class="dropdown-content">
+                    <a href="{{ url_for('statistics_daily') }}" class="{{ 'active' if request.url.path == url_for('statistics_daily') else '' }}">일별 메소</a>
+                    <a href="{{ url_for('statistics_weekday') }}" class="{{ 'active' if request.url.path == url_for('statistics_weekday') else '' }}">요일별 메소</a>
+                    <a href="{{ url_for('statistics_map') }}" class="{{ 'active' if request.url.path == url_for('statistics_map') else '' }}">맵별 메소</a>
+                </div>
+            </li>
+            <li><a href="{{ url_for('list_and_add_meso_sales') }}" class="{{ 'active' if 'meso-sales' in request.url.path else '' }}">쌀먹 장부</a></li>
+            <li><a href="{{ url_for('info_page') }}" class="active">정보</a></li>
+        </ul>
+    </nav>
 
     <main class="container">
-        <h2>사냥 기록</h2> <!-- '타임' 제거 -->
-        <div id="message-area-hunting" class="message-area"></div>
-        <form id="huntingForm">
+        <h2>쌀먹 장부</h2>
+        <div id="message-area-meso" class="message-area"></div>
+        <form id="mesoSaleForm">
             <div class="form-section">
-                <h3>기본 정보</h3> <!-- '타임 정보' -> '기본 정보' -->
+                <h3>판매 정보 입력</h3>
                 <div class="form-grid">
-                     <div class="form-group">
-                        <label for="session_date">날짜:</label>
-                        <input type="date" id="session_date" name="session_date" required>
+                    <div class="form-group">
+                        <label for="sale_date_flatpickr">판매 날짜:</label>
+                        <input type="text" id="sale_date_flatpickr" name="sale_date" required placeholder="날짜를 선택하세요...">
                     </div>
                     <div class="form-group">
-                        <label for="map_name">맵 이름:</label>
-                        <input type="text" id="map_name" name="map_name" placeholder="예: 불타는 검은구슬의 제단 3" required>
+                        <label for="price_per_1m_meso">100만 메소당 가격 (원):</label>
+                        <input type="number" id="price_per_1m_meso" name="price_per_1m_meso" value="0" min="0" required>
                     </div>
                     <div class="form-group">
-                        <label for="start_time">시작 시간:</label>
-                        <input type="time" id="start_time" name="start_time" required>
+                        <label for="quantity_sold_in_1m_units">판매량 (단위: 100만 메소):</label>
+                        <input type="number" id="quantity_sold_in_1m_units" name="quantity_sold_in_1m_units" value="0" step="0.01" min="0" required>
                     </div>
                     <div class="form-group">
-                        <label for="end_time">종료 시간:</label>
-                        <input type="time" id="end_time" name="end_time" required>
+                        <label>총 판매액 (원):</label>
+                        <div id="total_sale_amount_krw_display" class="calculated-value">0 원</div>
                     </div>
                 </div>
             </div>
-            <div class="form-section">
-                <h3>메소 & 경험치</h3>
-                 <div class="form-grid">
-                    <div class="form-group">
-                        <label for="start_meso">시작 메소:</label>
-                        <input type="number" id="start_meso" name="start_meso" value="0" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="end_meso">종료 메소:</label>
-                        <input type="number" id="end_meso" name="end_meso" value="0" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="sold_meso">(잡템)판매 후 메소:</label>
-                        <input type="number" id="sold_meso" name="sold_meso" value="0" required>
-                    </div>
-                     <div class="form-group">
-                        <label for="entry_fee">지참비 (선택):</label>
-                        <input type="number" id="entry_fee" name="entry_fee" value="0">
-                    </div>
-                    <div class="form-group">
-                        <label for="start_experience">시작 경험치:</label>
-                        <input type="number" id="start_experience" name="start_experience" value="0" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="end_experience">종료 경험치:</label>
-                        <input type="number" id="end_experience" name="end_experience" value="0" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="coupon_15min_count">15분 경쿠 사용 횟수:</label>
-                        <input type="number" id="coupon_15min_count" name="coupon_15min_count" value="0" min="0">
-                    </div>
-                </div>
-            </div>
-            <div class="form-section item-list-section">
-                <h3>획득한 고가 아이템</h3>
-                <div id="rareItemsContainer"></div>
-                <button type="button" onclick="addRareItemRow()" class="add-item-btn">고가 아이템 추가 (+)</button>
-            </div>
-             <div class="form-section item-list-section">
-                <h3>소모/획득 아이템</h3>
-                <div id="consumableItemsContainer"></div>
-                <button type="button" onclick="addConsumableRow()" class="add-item-btn">소모/획득 아이템 추가 (+)</button>
-            </div>
-            <div class="button-group">
-                <button type="submit">기록 추가 및 계산</button>
-                <button type="button" onclick="resetHuntingForm()" class="secondary">양식 초기화</button>
+            <div class="button-group"> <!-- 폼 내부 버튼 그룹 -->
+                <button type="submit">판매 기록 추가</button>
+                <button type="button" onclick="resetMesoSaleForm()" class="secondary">양식 초기화</button>
             </div>
         </form>
 
-        <h3>사냥 기록 목록</h3> <!-- '타임' 제거 -->
-         <div class="table-container">
-             <table id="huntingSessionsTable">
+        <!-- "메소 판매 목록" 제목 -->
+        <h3>메소 판매 목록</h3>
+
+        <!-- "모든 기록 삭제" 버튼을 목록 제목 아래, 테이블 바로 위로 이동 -->
+        <div class="table-controls">
+            <button type="button" id="deleteAllMesoSalesBtn" class="action-button">모든 기록 삭제</button>
+        </div>
+
+        <div class="table-container">
+            <table id="mesoSalesTable">
                 <thead>
                     <tr>
-                        <th>날짜</th> <th>맵명</th> <th>시작시간</th> <th>종료시간</th>
-                        <th>시작메소</th> <th>종료메소</th> <th>판매후메소</th> <th>지참비</th>
-                        <th>경쿠(15분)</th> <th>시작경험치</th> <th>종료경험치</th> <th>사냥메소수익</th>
-                        <th>일반템수익</th> <th>고가템가치</th> <th>소모아이템비</th> <th>소모템획득수익</th>
-                        <th>총수익</th> <th>순수익</th> <th>경험치수익</th> <th>원경험치</th>
+                        <th>판매 날짜</th>
+                        <th>100만당 가격(원)</th>
+                        <th>판매량(100만)</th>
+                        <th>총 판매액(원)</th>
                         <th>기록 시간</th>
+                        <th>작업</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr> <td colspan="21" style="text-align:center;">목록을 불러오는 중...</td> </tr>
+                    <tr><td colspan="6" style="text-align:center;">목록을 불러오는 중...</td></tr>
                 </tbody>
             </table>
-         </div>
+        </div>
     </main>
 
     <footer>
-        <p>&copy; 2025 의문의돌맹이. All rights reserved.</p>
+        <p>© 2025 김하늘 (의문의돌맹이). All rights reserved.</p>
     </footer>
 
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://npmcdn.com/flatpickr/dist/l10n/ko.js"></script>
     <script>
-        // JavaScript 코드는 이전 답변과 동일하게 유지 (API URL은 '/api/hunting-times/' 사용)
-        const huntingForm = document.getElementById('huntingForm');
-        const messageArea = document.getElementById('message-area-hunting');
-        const rareItemsContainer = document.getElementById('rareItemsContainer');
-        const consumableItemsContainer = document.getElementById('consumableItemsContainer');
-        const huntingTableBody = document.getElementById('huntingSessionsTable').getElementsByTagName('tbody')[0];
+        const mesoSaleForm = document.getElementById('mesoSaleForm');
+        const messageArea = document.getElementById('message-area-meso');
+        const mesoSalesTableBody = document.getElementById('mesoSalesTable').getElementsByTagName('tbody')[0];
+        
+        const priceInput = document.getElementById('price_per_1m_meso');
+        const quantityInput = document.getElementById('quantity_sold_in_1m_units');
+        const totalDisplay = document.getElementById('total_sale_amount_krw_display');
+        const deleteAllMesoSalesBtn = document.getElementById('deleteAllMesoSalesBtn');
+
+        let saleDateFlatpickrInstance = null;
 
         document.addEventListener('DOMContentLoaded', function() {
-            document.getElementById('session_date').value = new Date().toISOString().split('T')[0];
-            loadHuntingSessions();
-        });
-
-        function addRareItemRow() {
-            const index = rareItemsContainer.children.length;
-            const div = document.createElement('div');
-            div.classList.add('item-row');
-            div.innerHTML = `
-                <label for="rare_item_name_${index}">아이템명:</label>
-                <input type="text" id="rare_item_name_${index}" name="rare_items[${index}][item_name]" placeholder="아이템 이름" class="item-name">
-                <label for="rare_item_value_${index}">예상 가치:</label>
-                <input type="number" id="rare_item_value_${index}" name="rare_items[${index}][item_value]" value="0" min="0" class="item-value">
-                <button type="button" onclick="this.closest('.item-row').remove()" class="remove-item-btn">X</button>
-            `;
-            rareItemsContainer.appendChild(div);
-        }
-
-        function addConsumableRow() {
-            const index = consumableItemsContainer.children.length;
-            const div = document.createElement('div');
-            div.classList.add('item-row');
-            div.innerHTML = `
-                <label for="cons_item_name_${index}">명칭:</label>
-                <input type="text" id="cons_item_name_${index}" name="consumable_items[${index}][item_name]" placeholder="아이템 이름" class="item-name">
-                <label for="cons_item_price_${index}">개당 가격/가치:</label>
-                <input type="number" id="cons_item_price_${index}" name="consumable_items[${index}][price_or_value_per_item]" value="0" min="0" class="item-value">
-                <label for="cons_start_qty_${index}">시작:</label>
-                <input type="number" id="cons_start_qty_${index}" name="consumable_items[${index}][start_quantity]" value="0" min="0" class="item-qty">
-                <label for="cons_end_qty_${index}">종료:</label>
-                <input type="number" id="cons_end_qty_${index}" name="consumable_items[${index}][end_quantity]" value="0" min="0" class="item-qty">
-                <button type="button" onclick="this.closest('.item-row').remove()" class="remove-item-btn">X</button>
-            `;
-            consumableItemsContainer.appendChild(div);
-        }
-
-        huntingForm.addEventListener('submit', async function(event) {
-            event.preventDefault();
-            showMessage('');
-
-            const formData = new FormData(huntingForm);
-            const data = {};
-            for (let [key, value] of formData.entries()) {
-                if (!key.startsWith('rare_items[') && !key.startsWith('consumable_items[')) {
-                    if (['start_meso', 'end_meso', 'sold_meso', 'entry_fee', 'start_experience', 'end_experience', 'coupon_15min_count'].includes(key)) {
-                        data[key] = parseInt(value) || 0;
-                    } else { data[key] = value; }
-                }
+            const dateInputMeso = document.getElementById('sale_date_flatpickr');
+            if (dateInputMeso) {
+                saleDateFlatpickrInstance = flatpickr(dateInputMeso, {
+                    dateFormat: "Y-m-d",
+                    defaultDate: "today",
+                    locale: "ko"
+                });
+                console.log("Flatpickr initialized for sale_date_flatpickr");
+            } else {
+                console.error("'sale_date_flatpickr' ID를 가진 요소를 찾을 수 없습니다.");
             }
-            data.rare_items = [];
-            rareItemsContainer.querySelectorAll('.item-row').forEach((row, index) => {
-                const name = row.querySelector(`input[name="rare_items[${index}][item_name]"]`).value.trim();
-                const value = parseInt(row.querySelector(`input[name="rare_items[${index}][item_value]"]`).value) || 0;
-                if (name && value > 0) { data.rare_items.push({ item_name: name, item_value: value }); }
-            });
-            data.consumable_items = [];
-            consumableItemsContainer.querySelectorAll('.item-row').forEach((row, index) => {
-                const name = row.querySelector(`input[name="consumable_items[${index}][item_name]"]`).value.trim();
-                const price = parseInt(row.querySelector(`input[name="consumable_items[${index}][price_or_value_per_item]"]`).value) || 0;
-                const startQty = parseInt(row.querySelector(`input[name="consumable_items[${index}][start_quantity]"]`).value) || 0;
-                const endQty = parseInt(row.querySelector(`input[name="consumable_items[${index}][end_quantity]"]`).value) || 0;
-                if (name) { data.consumable_items.push({ item_name: name, price_or_value_per_item: price, start_quantity: startQty, end_quantity: endQty }); }
-            });
+
+            calculateTotalSaleValue(); 
+            loadMesoSales();
+
+            if (deleteAllMesoSalesBtn) {
+                deleteAllMesoSalesBtn.addEventListener('click', deleteAllMesoSales);
+                console.log("deleteAllMesoSales 이벤트 리스너 연결됨.");
+            } else {
+                console.error("deleteAllMesoSalesBtn 요소를 찾을 수 없습니다!");
+            }
+        });
+        
+        function calculateTotalSaleValue() {
+            const price = parseFloat(priceInput.value) || 0;
+            const quantity = parseFloat(quantityInput.value) || 0;
+            const total = price * quantity;
+            totalDisplay.textContent = `${Math.round(total).toLocaleString()} 원`;
+            return Math.round(total);
+        }
+
+        if(priceInput) priceInput.addEventListener('input', calculateTotalSaleValue);
+        if(quantityInput) quantityInput.addEventListener('input', calculateTotalSaleValue);
+
+        mesoSaleForm.addEventListener('submit', async function(event) {
+            event.preventDefault();
+            showMessage('메소 판매 기록 추가 중...', 'info');
+
+            let saleDateValue = "";
+            if (saleDateFlatpickrInstance) {
+                saleDateValue = saleDateFlatpickrInstance.input.value;
+            } else if (document.getElementById('sale_date_flatpickr')) {
+                saleDateValue = document.getElementById('sale_date_flatpickr').value;
+            } else {
+                saleDateValue = new Date().toISOString().split('T')[0];
+            }
+
+            const data = {
+                sale_date: saleDateValue,
+                price_per_1m_meso: parseInt(priceInput.value) || 0,
+                quantity_sold_in_1m_units: parseFloat(quantityInput.value) || 0,
+                total_sale_amount_krw: calculateTotalSaleValue()
+            };
+
+            console.log("Data being sent for Meso Sale:", JSON.stringify(data, null, 2));
 
             try {
-                showMessage('기록 추가 및 계산 중...', 'info');
-                const response = await fetch('/api/hunting-times/', { // API URL: /api/hunting-times/
+                const response = await fetch('/api/meso-sales/', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(data),
                 });
+
                 if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({ detail: '알 수 없는 서버 오류' }));
-                    throw new Error(errorData.detail || '사냥 기록 추가에 실패했습니다.');
+                    const errorData = await response.json().catch(() => ({ detail: `HTTP error ${response.status}` }));
+                    throw new Error(errorData.detail || `메소 판매 기록 추가 중 오류 발생 (상태: ${response.status})`);
                 }
                 const result = await response.json();
-                showMessage('사냥 기록이 성공적으로 추가되었습니다.', 'success');
-                resetHuntingForm();
-                loadHuntingSessions();
+                showMessage('메소 판매 기록이 성공적으로 추가되었습니다.', 'success', 3000);
+                resetMesoSaleForm();
+                loadMesoSales();
             } catch (error) {
-                showMessage(`오류: ${error.message}`, 'error');
-                console.error('Error adding hunting session:', error);
+                showMessage(`오류: ${error.message}`, 'error', 5000);
+                console.error('Error adding meso sale:', error);
             }
         });
 
-        async function loadHuntingSessions() {
-            huntingTableBody.innerHTML = '<tr><td colspan="21" style="text-align:center;">목록을 불러오는 중...</td></tr>';
+        async function loadMesoSales() {
+            if (!mesoSalesTableBody) { console.error("Meso Sales: 'mesoSalesTable' tbody not found!"); return; }
+            const colspan = 6;
+            mesoSalesTableBody.innerHTML = `<tr><td colspan="${colspan}" style="text-align:center;">목록을 불러오는 중...</td></tr>`;
             try {
-                const response = await fetch('/api/hunting-times/'); // API URL: /api/hunting-times/
+                const response = await fetch('/api/meso-sales/');
                 if (!response.ok) { throw new Error(`서버 응답 오류: ${response.status}`); }
-                const sessions = await response.json();
-                huntingTableBody.innerHTML = '';
-                if (sessions && sessions.length > 0) {
-                    sessions.sort((a, b) => new Date(b.session_date) - new Date(a.session_date) || new Date(b.created_at) - new Date(a.created_at));
-                    sessions.forEach(session => {
-                        const row = huntingTableBody.insertRow();
-                        row.insertCell().textContent = session.session_date || 'N/A';
-                        row.insertCell().textContent = session.map_name || 'N/A';
-                        row.insertCell().textContent = session.start_time || 'N/A';
-                        row.insertCell().textContent = session.end_time || 'N/A';
-                        row.insertCell().textContent = (session.start_meso || 0).toLocaleString();
-                        row.insertCell().textContent = (session.end_meso || 0).toLocaleString();
-                        row.insertCell().textContent = (session.sold_meso || session.end_meso || 0).toLocaleString();
-                        row.insertCell().textContent = (session.entry_fee || 0).toLocaleString();
-                        row.insertCell().textContent = session.coupon_15min_count || 0;
-                        row.insertCell().textContent = (session.start_experience || 0).toLocaleString();
-                        row.insertCell().textContent = (session.end_experience || 0).toLocaleString();
-                        row.insertCell().textContent = (session.hunting_meso_profit || 0).toLocaleString();
-                        row.insertCell().textContent = (session.normal_item_profit || 0).toLocaleString();
-                        row.insertCell().textContent = (session.total_rare_item_value || 0).toLocaleString();
-                        row.insertCell().textContent = (session.total_consumable_cost || 0).toLocaleString();
-                        row.insertCell().textContent = (session.total_consumable_gained_profit || 0).toLocaleString();
-                        row.insertCell().textContent = (session.total_profit || 0).toLocaleString();
-                        row.insertCell().textContent = (session.net_profit || 0).toLocaleString();
-                        row.insertCell().textContent = (session.experience_profit || 0).toLocaleString();
-                        row.insertCell().textContent = (session.base_experience_profit || 0).toLocaleString();
-                        row.insertCell().textContent = session.created_at ? new Date(session.created_at).toLocaleString() : 'N/A';
+                const sales = await response.json();
+                mesoSalesTableBody.innerHTML = '';
+
+                if (sales && sales.length > 0) {
+                    sales.sort((a, b) => {
+                        const dateComparison = new Date(b.sale_date) - new Date(a.sale_date);
+                        if (dateComparison !== 0) return dateComparison;
+                        return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+                    });
+
+                    sales.forEach(sale => {
+                        const row = mesoSalesTableBody.insertRow();
+                        row.insertCell().textContent = sale.sale_date || 'N/A';
+                        row.insertCell().textContent = (sale.price_per_1m_meso || 0).toLocaleString();
+                        row.insertCell().textContent = (sale.quantity_sold_in_1m_units || 0).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 2 });
+                        row.insertCell().textContent = (sale.total_sale_amount_krw || 0).toLocaleString();
+                        row.insertCell().textContent = sale.created_at ? new Date(sale.created_at).toLocaleString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }) : 'N/A';
+                        
+                        const actionCell = row.insertCell();
+                        actionCell.style.textAlign = 'center';
+                        const deleteButton = document.createElement('button');
+                        deleteButton.textContent = '삭제';
+                        deleteButton.className = 'remove-item-btn';
+                        deleteButton.onclick = function() { deleteSingleMesoSale(sale.id); };
+                        actionCell.appendChild(deleteButton);
                     });
                 } else {
-                    huntingTableBody.innerHTML = '<tr><td colspan="21" style="text-align:center;">기록된 사냥 내역이 없습니다.</td></tr>';
+                    mesoSalesTableBody.innerHTML = `<tr><td colspan="${colspan}" style="text-align:center;">기록된 메소 판매 내역이 없습니다.</td></tr>`;
                 }
             } catch (error) {
-                huntingTableBody.innerHTML = `<tr><td colspan="21" style="text-align:center; color: red;">목록 로드 실패: ${error.message}</td></tr>`;
+                mesoSalesTableBody.innerHTML = `<tr><td colspan="${colspan}" style="text-align:center; color: red;">목록 로드 실패: ${error.message}</td></tr>`;
                 showMessage(`목록 로드 실패: ${error.message}`, 'error');
-                console.error('Error loading hunting sessions:', error);
+                console.error('Error loading meso sales:', error);
             }
         }
 
-        function showMessage(message, type = 'info') {
-            messageArea.textContent = message;
-            messageArea.className = 'message-area ' + type;
+        async function deleteSingleMesoSale(saleId) {
+            if (!saleId) {
+                showMessage('삭제할 판매 기록 ID가 없습니다.', 'error', 3000);
+                return;
+            }
+            const recordType = "메소 판매";
+            if (!confirm(`ID ${saleId}번 ${recordType} 기록을 정말로 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`)) {
+                showMessage(`${recordType} 기록 삭제가 취소되었습니다.`, 'info', 3000);
+                return;
+            }
+
+            showMessage(`${recordType} 기록 삭제 중...`, 'info');
+            try {
+                const response = await fetch(`/api/meso-sales/${saleId}`, {
+                    method: 'DELETE'
+                });
+                if (!response.ok) {
+                    let errorDetail = `서버 응답 오류: ${response.status}`;
+                    try { const errorData = await response.json(); errorDetail = errorData.detail || errorDetail; } catch (e) { }
+                    throw new Error(errorDetail);
+                }
+                const result = await response.json();
+                showMessage(result.message || `${recordType} 기록이 성공적으로 삭제되었습니다.`, 'success', 3000);
+                loadMesoSales();
+            } catch (error) {
+                console.error(`단일 ${recordType} 기록 삭제 오류:`, error);
+                showMessage(`삭제 오류: ${error.message}`, 'error', 5000);
+            }
         }
 
-        function resetHuntingForm() {
-            huntingForm.reset();
-            document.getElementById('session_date').value = new Date().toISOString().split('T')[0];
-            rareItemsContainer.innerHTML = '';
-            consumableItemsContainer.innerHTML = '';
+        async function deleteAllMesoSales() {
+            const recordType = "메소 판매";
+            const confirmationMessage = `정말로 모든 ${recordType} 기록을 삭제하시겠습니까? 이 작업은 되돌릴 수 없으며, 저장된 모든 ${recordType} 데이터가 영구적으로 사라집니다. 계속하시려면 '확인'을, 취소하시려면 '취소'를 누르세요.`;
+
+            if (!confirm(confirmationMessage)) {
+                showMessage(`${recordType} 기록 전체 삭제가 취소되었습니다.`, 'info', 3000);
+                return;
+            }
+
+            showMessage(`모든 ${recordType} 기록 삭제 중...`, 'info');
+            try {
+                const response = await fetch('/api/meso-sales/all/', {
+                    method: 'DELETE'
+                });
+                if (!response.ok) {
+                    let errorDetail = `서버 응답 오류: ${response.status}`;
+                    try { const errorData = await response.json(); errorDetail = errorData.detail || errorDetail; } catch (e) { }
+                    throw new Error(errorDetail);
+                }
+                const result = await response.json();
+                showMessage(result.message || `총 ${result.deleted_count || 0}개의 ${recordType} 기록이 성공적으로 삭제되었습니다.`, 'success', 4000);
+                loadMesoSales();
+            } catch (error) {
+                console.error(`전체 ${recordType} 기록 삭제 오류:`, error);
+                showMessage(`전체 삭제 오류: ${error.message}`, 'error', 5000);
+            }
+        }
+        
+        function showMessage(message, type = 'info', duration = 0) {
+            if (!messageArea) return;
+            messageArea.textContent = message;
+            messageArea.className = 'message-area ' + type;
+            messageArea.style.display = message ? 'block' : 'none';
+
+            if (duration > 0) {
+                setTimeout(() => {
+                    messageArea.style.display = 'none';
+                    messageArea.textContent = '';
+                    messageArea.className = 'message-area';
+                }, duration);
+            }
+        }
+
+        function resetMesoSaleForm() {
+            if(!mesoSaleForm) return;
+            mesoSaleForm.reset();
+            if (saleDateFlatpickrInstance) {
+                saleDateFlatpickrInstance.setDate(new Date(), true); 
+            } else if (document.getElementById('sale_date_flatpickr')){
+                 document.getElementById('sale_date_flatpickr').value = new Date().toISOString().split('T')[0];
+            }
+            calculateTotalSaleValue();
             showMessage('');
         }
     </script>
 </body>
+</html>

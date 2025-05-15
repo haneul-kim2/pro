@@ -4,130 +4,650 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>경험치 통계</title>
-    <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}"> <!-- CSS 경로 확인 -->
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <style>
-        /* 페이지별 추가 스타일 필요 시 여기에 작성 */
-        .stat-item { margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 5px; background-color: #f9f9f9; }
-        .stat-item h3 { margin-top: 0; color: #333; }
-        #dailyExpList ul { list-style-type: none; padding: 0; }
-        #dailyExpList li { margin-bottom: 5px; font-size: 0.9em; }
+        /* 기본 스타일 (다른 페이지와 유사) */
+        body { font-family: 'Arial', sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; color: #333; display: flex; flex-direction: column; min-height: 100vh; }
+        header { background: #333; color: #fff; padding: 1.8rem 0; text-align: center; }
+        header h1 { margin: 0; font-size: 1.8rem; }
+        nav { background: #444; padding: 0.5rem 0; }
+        nav ul { padding: 0; list-style: none; text-align: center; margin: 0; }
+        nav ul li { display: inline-block; margin: 0 5px; }
+        nav ul li a { text-decoration: none; color: #fff; padding: 10px 15px; display: inline-block; border-radius: 4px; transition: background-color 0.3s ease; }
+        nav ul li a:hover, nav ul li a.active { background-color: #555; }
+        main.container { flex-grow: 1; width: 90%; max-width: 1200px; margin: 20px auto; padding: 20px; background-color: #fff; box-shadow: 0 0 10px rgba(0,0,0,0.1); border-radius: 8px; }
+        footer { background: #333; color: #fff; text-align: center; padding: 1rem 0; margin-top: auto; width: 100%; }
+        nav ul li.dropdown { position: relative; display: inline-block; }
+        nav ul li.dropdown .dropbtn { cursor: default; }
+        nav ul li.dropdown .dropdown-content { display: none; position: absolute; background-color: #444; min-width: 120px; box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2); z-index: 101; left: 0; border-radius: 0 0 4px 4px; overflow: hidden; }
+        nav ul li.dropdown .dropdown-content a { color: white; padding: 10px 15px; text-decoration: none; display: block; text-align: left; white-space: nowrap; }
+        nav ul li.dropdown .dropdown-content a:hover { background-color: #555; }
+        nav ul li.dropdown:hover .dropdown-content { display: block; }
+        
+        h2, h3 { color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 30px; margin-bottom: 20px; }
+        h2:first-of-type { margin-top: 0; }
+
+        .filters { background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin-bottom: 20px; display: flex; gap: 15px; align-items: center; flex-wrap: wrap; border: 1px solid #eee;}
+        .filters label { font-weight: bold; margin-right: 5px; color: #555; }
+        .filters input[type="text"] { padding: 8px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem; }
+        .filters button { background-color: #5bc0de; color: white; padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer; transition: background-color 0.3s ease; }
+        .filters button:hover { background-color: #31b0d5; }
+        
+        .stat-item { margin-bottom: 30px; padding: 20px; border: 1px solid #eee; border-radius: 5px; background-color: #f9f9f9; }
+        .stat-item h3 { margin-top: 0; color: #333; border-bottom: none; }
+        .stat-item p { font-size: 1.2rem; font-weight: bold; color: #28a745; margin: 10px 0 0 0; }
+        
+        .chart-container { position: relative; height: 45vh; width: 100%; margin-bottom: 30px; padding:10px; border: 1px solid #eee; border-radius: 5px;}
+        #dailyExpChart { background-color: #fff;}
+
+        .table-container { overflow-x: auto; margin-top: 10px; /* 기준 파일과 맞춤 (20px -> 10px) */ margin-bottom: 30px; }
+        table { width: 100%; border-collapse: collapse; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        th, td { border: 1px solid #e0e0e0; padding: 8px 10px; /* 기준 파일과 맞춤 (10px 12px -> 8px 10px) */ text-align: left; vertical-align: middle; font-size: 0.85rem; /* 기준 파일과 맞춤 (0.9rem -> 0.85rem) */ white-space: nowrap; }
+        th { background-color: #f8f8f8; font-weight: bold; color: #333; font-size: 0.8rem; /* 기준 파일과 맞춤 (0.85rem -> 0.8rem) */ text-transform: none; /* 기준 파일에 uppercase 없음 */ }
+        tbody tr:nth-child(even) { background-color: #fdfdfd; }
+        tbody tr:hover { background-color: #f0f0f0; }
+        tfoot tr { background-color: #f0f8ff; font-weight: bold; }
+        .number-cell { text-align: right; }
+
+        .message-area { padding: 15px; margin-bottom: 20px; border-radius: 4px; border: 1px solid transparent; }
+        .message-area.error { background-color: #f2dede; color: #a94442; border-color: #ebccd1; }
+        .message-area.info { background-color: #d9edf7; color: #31708f; border-color: #bce8f1; }
+        .message-area:empty { display: none; }
+
+        /* --- 컬럼 표시 설정 관련 스타일 (기준 파일 참고하여 추가/수정) --- */
+        .detail-header { /* 기준 파일에 있는 구조, 필요시 h3와 table-controls 감싸기 */
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .detail-header h3 {
+             margin-bottom: 0; /* h3가 detail-header 안에 있을 경우 */
+             border-bottom: none;
+        }
+        .table-controls {
+            position: relative;
+            /* 만약 버튼을 오른쪽 정렬하고 싶다면:
+            display: flex;
+            justify-content: flex-end; */
+            margin-bottom: 10px; /* 기준 파일 참고 */
+        }
+        .table-controls button.table-action-button { /* 클래스명 변경 적용 */
+            font-size:0.8em; padding:5px 10px;
+            background-color: #5cb85c; color: white;
+            border:none; border-radius: 3px; cursor:pointer;
+            transition: background-color 0.3s ease;
+        }
+        .table-controls button.table-action-button:hover {
+            background-color: #4cae4c;
+        }
+
+        .column-toggle-popup {
+            display: none; /* 중요: 기본적으로 숨김 처리 */
+            position: absolute;
+            background-color: white;
+            border: 1px solid #ccc;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 15px;
+            z-index: 1050; /* 다른 요소 위에 오도록 z-index 설정 */
+            max-height: 300px;
+            overflow-y: auto;
+            text-align: left;
+            border-radius: 4px;
+            min-width: 180px; /* 내용에 따라 조절 */
+            /* 위치는 JS에서 동적으로 설정 */
+        }
+        .column-toggle-popup label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 0.9em;
+            user-select: none;
+            cursor: pointer;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .column-toggle-popup input[type="checkbox"] {
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+        .column-toggle-popup button.popup-close-btn {
+            display:block;
+            width:100%;
+            margin-top:10px;
+            padding: 8px;
+            font-size:0.9em;
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        .column-toggle-popup button.popup-close-btn:hover {
+            background-color: #5a6268;
+        }
+        .flatpickr-calendar { z-index: 1051 !important; } /* flatpickr가 팝업보다 위에 오도록 */
+
     </style>
 </head>
 <body>
     <header>
-        <h1>메이플스토리 수익 기록 웹</h1> <!-- 헤더 제목 확인 -->
-        <!-- 네비게이션 바 - 순서 및 이름 변경 -->
-<nav>
-    <ul>
-        <!-- 1. 홈 -->
-        <li><a href="{{ url_for('home') }}">홈</a></li> <!-- 'active' 클래스는 페이지별로 다를 수 있으니 일단 빼고 복사하거나, 나중에 각 페이지에 맞게 수정 -->
-
-        <!-- 2. 사냥 -->
-        <li><a href="{{ url_for('list_and_add_hunting_sessions') }}">사냥</a></li>
-
-        <!-- 3. 쩔 -->
-        <li><a href="{{ url_for('list_and_add_jjul_sessions') }}">쩔</a></li>
-
-        <!-- 4. 경험치 통계 (신규 추가) -->
-        <li><a href="{{ url_for('statistics_experience') }}">경험치 통계</a></li>
-
-        <!-- 5. 통계 (드롭다운) -->
-        <li class="dropdown">
-            <a href="javascript:void(0)" class="dropbtn">통계</a>
-            <div class="dropdown-content">
-                <a href="{{url_for('statistics_daily') }}">일별 요약</a>
-                <a href="{{ url_for('statistics_map') }}">맵별 요약</a>
-                <a href="{{ url_for('statistics_weekday') }}">요일별 요약</a>
-            </div>
-        </li>
-
-        <!-- 6. 메소 판매 기록 (이름 변경) -->
-        <li><a href="{{ url_for('list_and_add_meso_sales') }}">메소 판매 기록</a></li>
-    </ul>
-</nav>
-    <!-- 네비게이션 바 끝 -->
+        <h1>메랜통계</h1>
     </header>
 
-    <main class="container"> <!-- main 태그에 class="container" 추가 (다른 페이지와 통일) -->
-        <h2>경험치 통계</h2>
+    <nav>
+        <ul>
+            <li><a href="{{ url_for('home') }}" class="{{ 'active' if request.url.path == url_for('home') else '' }}">홈</a></li>
+            <li><a href="{{ url_for('list_and_add_hunting_sessions') }}" class="{{ 'active' if 'hunting-sessions' in request.url.path else '' }}">사냥</a></li>
+            <li><a href="{{ url_for('list_and_add_jjul_sessions') }}" class="{{ 'active' if 'jjul-sessions' in request.url.path else '' }}">쩔</a></li>
+            
+            <li class="dropdown">
+                <a href="javascript:void(0)" class="dropbtn {{ 'active' if request.url.path.startswith((url_for('statistics_experience_daily')|string).rsplit('/', 1)[0]) else '' }}">경험치 통계</a>
+                <div class="dropdown-content">
+                    <a href="{{ url_for('statistics_experience_daily') }}" class="{{ 'active' if request.url.path == url_for('statistics_experience_daily') else '' }}">일별 경험치</a>
+                    <a href="{{ url_for('statistics_experience_weekday') }}" class="{{ 'active' if request.url.path == url_for('statistics_experience_weekday') else '' }}">요일별 경험치</a>
+                    <a href="{{ url_for('statistics_experience_map') }}" class="{{ 'active' if request.url.path == url_for('statistics_experience_map') else '' }}">맵별 경험치</a>
+                    </div>
+            </li>
 
-        <div id="averageExpPerHour" class="stat-item">
-            <h3>시간당 평균 경험치</h3>
-            <p>로딩 중...</p>
+            <li class="dropdown">
+                <a href="javascript:void(0)" class="dropbtn {{ 'active' if request.url.path.startswith((url_for('statistics_daily')|string).rsplit('/', 1)[0]) and not request.url.path.startswith((url_for('statistics_experience_daily')|string).rsplit('/', 1)[0]) else '' }}">메소 통계</a>
+                <div class="dropdown-content">
+                    <a href="{{ url_for('statistics_daily') }}" class="{{ 'active' if request.url.path == url_for('statistics_daily') else '' }}">일별 메소</a>
+                    <a href="{{ url_for('statistics_weekday') }}" class="{{ 'active' if request.url.path == url_for('statistics_weekday') else '' }}">요일별 메소</a>
+                    <a href="{{ url_for('statistics_map') }}" class="{{ 'active' if request.url.path == url_for('statistics_map') else '' }}">맵별 메소</a>
+                </div>
+            </li>
+            <li><a href="{{ url_for('list_and_add_meso_sales') }}" class="{{ 'active' if 'meso-sales' in request.url.path else '' }}">쌀먹 장부</a></li>
+            <li><a href="{{ url_for('info_page') }}" class="active">정보</a></li>
+        </ul>
+    </nav>
+
+    <main class="container">
+        <h2>경험치 통계</h2>
+        <div id="message-area-experience" class="message-area"></div>
+
+        <div id="averageExpPerHourSection" class="stat-item">
+            <h3>전체 기간 시간당 평균 경험치</h3>
+            <p id="avgExpText">로딩 중...</p>
         </div>
 
-        <div id="dailyExpTotal" class="stat-item">
-            <h3>일별 총 획득 경험치</h3>
-            <div id="dailyExpList">
-                <p>로딩 중...</p>
+        <div id="dailyExpTotalSection">
+            <h3>일별 총 획득 경험치 (기간 선택)</h3>
+            <div class="filters">
+                <label for="startDate_fp_exp">시작 날짜:</label>
+                <input type="text" id="startDate_fp_exp" placeholder="날짜 선택...">
+                <label for="endDate_fp_exp">종료 날짜:</label>
+                <input type="text" id="endDate_fp_exp" placeholder="날짜 선택...">
+                <button onclick="loadDailyTotalExp()">조회</button>
+            </div>
+            <div class="chart-container">
+                <canvas id="dailyExpChart"></canvas>
             </div>
         </div>
-
+        
+        <div class="detail-header">
+            <h3>일별 상세 획득 경험치</h3>
+            <div class="table-controls">
+                <button type="button" id="toggleExpDetailColumnsBtn" class="table-action-button" style="font-size:0.8em; padding:5px 10px;">컬럼 표시 설정</button>
+                <div id="expDetailColumnTogglePopup" class="column-toggle-popup">
+                    </div>
+            </div>
+        </div>
+        <div class="table-container">
+            <table id="dailyExpDetailTable">
+                <thead>
+                </thead>
+                <tbody id="dailyExpDetailTableBody"> </tbody>
+                <tfoot id="dailyExpDetailTableFoot"> </tfoot>
+            </table>
+        </div>
     </main>
 
     <footer>
-        <p>© 2025 의문의돌맹이. All rights reserved.</p> <!-- 푸터 내용 확인 -->
+        <p>© 2025 의문의돌맹이. All rights reserved.</p>
     </footer>
 
-    <script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://npmcdn.com/flatpickr/dist/l10n/ko.js"></script>
+        <script>
+        // 각 통계 페이지 <script> 태그 상단에 추가
+            Chart.defaults.font.family = "'Noto Sans KR', sans-serif";
+            Chart.defaults.font.size = 11; // 글꼴 크기 약간 작게
+            Chart.defaults.color = '#a0a0a0'; // 차트의 전반적인 텍스트 색상 (축, 범례 등) - 보조 텍스트 색
+            Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.08)'; // 그리드 선 등 기본 테두리 색 (더 연하게)
+        const avgExpTextElement = document.getElementById('avgExpText');
+        const messageArea = document.getElementById('message-area-experience');
+        
+        let startDateFlatpickrExp = null;
+        let endDateFlatpickrExp = null;
+        let dailyExpChartInstance = null;
+
+        const dailyExpTableBody = document.getElementById('dailyExpDetailTableBody'); 
+        const dailyExpTableFoot = document.getElementById('dailyExpDetailTableFoot');
+        let currentDailyExpData = {}; 
+
+        // --- 컬럼 토글 기능 요소 참조 (경험치 상세 테이블용) ---
+        const toggleExpDetailColumnsBtn = document.getElementById('toggleExpDetailColumnsBtn');
+        const expDetailColumnTogglePopup = document.getElementById('expDetailColumnTogglePopup');
+        const expDetailTable = document.getElementById('dailyExpDetailTable'); 
+        const expDetailTableHead = expDetailTable?.getElementsByTagName('thead')[0];
+
+        const LS_EXP_DETAIL_COL_VISIBILITY_KEY = 'expDetailTableColumnVisibility_v1';
+
+        const expDetailTableColumns = [
+            { key: 'date', header: '날짜', defaultVisible: true, type: 'string' },
+            { key: 'gained_exp', header: '총 획득 경험치', defaultVisible: true, type: 'number', class: 'number-cell' }
+        ];
+
+        let expDetailColumnVisibility = {};
+
+        function loadColumnVisibility(key, columnsConfig) {
+            const savedVisibility = localStorage.getItem(key);
+            let visibility = {};
+            if (savedVisibility) {
+                try { 
+                    const parsed = JSON.parse(savedVisibility);
+                    columnsConfig.forEach(col => {
+                        if (col.noToggle) {
+                           visibility[col.key] = true;
+                        } else if (parsed[col.key] === undefined) {
+                            visibility[col.key] = col.defaultVisible !== undefined ? col.defaultVisible : true;
+                        } else {
+                            visibility[col.key] = parsed[col.key];
+                        }
+                    });
+                    return visibility;
+                } catch(e) { console.error("Error parsing column visibility from LS for " + key, e); }
+            }
+            columnsConfig.forEach(col => {
+                if (!col.noToggle) {
+                    visibility[col.key] = col.defaultVisible !== undefined ? col.defaultVisible : true;
+                } else {
+                    visibility[col.key] = true; 
+                }
+            });
+            return visibility;
+        }
+
+        function saveColumnVisibility(key, visibilityConfig) {
+            localStorage.setItem(key, JSON.stringify(visibilityConfig));
+        }
+
+        function renderExpDetailTableHeaders() {
+            if (!expDetailTableHead) { console.error("expDetailTable thead not found!"); return; }
+            expDetailTableHead.innerHTML = ''; 
+            const headerRow = expDetailTableHead.insertRow();
+            expDetailTableColumns.forEach(col => {
+                if (expDetailColumnVisibility[col.key]) {
+                    const th = document.createElement('th');
+                    th.textContent = col.header;
+                    if (col.class && col.class.includes('number-cell')) {
+                         th.classList.add('number-cell');
+                    }
+                    headerRow.appendChild(th);
+                }
+            });
+        }
+        
+        function setupColumnTogglePopupExpDetail() {
+            if (!expDetailColumnTogglePopup || !toggleExpDetailColumnsBtn) {
+                console.error("Experience detail column toggle popup or button element not found.");
+                return;
+            }
+            expDetailColumnTogglePopup.innerHTML = ''; 
+
+            expDetailTableColumns.forEach(col => {
+                if (col.noToggle) return;
+
+                const checkboxId = `col-toggle-exp-detail-${col.key}`;
+                const label = document.createElement('label');
+                label.htmlFor = checkboxId;
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.id = checkboxId;
+                checkbox.value = col.key;
+                checkbox.checked = !!expDetailColumnVisibility[col.key];
+
+                checkbox.addEventListener('change', function() {
+                    expDetailColumnVisibility[this.value] = this.checked;
+                    saveColumnVisibility(LS_EXP_DETAIL_COL_VISIBILITY_KEY, expDetailColumnVisibility);
+                    renderExpDetailTableHeaders();
+                    if (typeof currentDailyExpData !== 'undefined' && currentDailyExpData) {
+                         renderDailyExperienceTable(currentDailyExpData);
+                    } else {
+                        const colspanCount = Object.values(expDetailColumnVisibility).filter(v => v).length || expDetailTableColumns.length;
+                        if (dailyExpTableBody) { 
+                            dailyExpTableBody.innerHTML = `<tr><td colspan="${colspanCount}" style="text-align:center;">데이터를 조회해주세요.</td></tr>`;
+                        }
+                        if (dailyExpTableFoot) { 
+                            dailyExpTableFoot.innerHTML = '';
+                        }
+                    }
+                });
+
+                label.appendChild(checkbox);
+                label.appendChild(document.createTextNode(` ${col.header}`));
+                expDetailColumnTogglePopup.appendChild(label);
+            });
+
+            const closeButton = document.createElement('button');
+            closeButton.textContent = '닫기';
+            closeButton.classList.add('popup-close-btn'); 
+            closeButton.onclick = function() { toggleColumnPopupExpDetail(); };
+            expDetailColumnTogglePopup.appendChild(closeButton);
+            // console.log("[DEBUG] setupColumnTogglePopupExpDetail 완료."); // 디버그 로그는 유지
+        }
+
+        function toggleColumnPopupExpDetail() {
+            if (!expDetailColumnTogglePopup || !toggleExpDetailColumnsBtn) {
+                console.error("Experience detail column toggle popup or button element not found for toggling.");
+                return;
+            }
+
+            const isVisible = expDetailColumnTogglePopup.style.display === 'block';
+            if (isVisible) {
+                expDetailColumnTogglePopup.style.display = 'none';
+                // console.log("[DEBUG] Experience Detail 컬럼 팝업 숨김.");
+            } else {
+                expDetailColumnTogglePopup.style.display = 'block';
+                const buttonRect = toggleExpDetailColumnsBtn.getBoundingClientRect();
+                // .table-controls가 직접적인 부모가 아닐 수 있으므로, 버튼의 offsetParent를 기준으로 할 수도 있습니다.
+                // 여기서는 기준 파일의 로직을 최대한 따릅니다.
+                const parentContainer = toggleExpDetailColumnsBtn.closest('.table-controls') || toggleExpDetailColumnsBtn.parentElement;
+                const containerRect = parentContainer.getBoundingClientRect();
+                
+                // 팝업 위치 계산 (버튼 바로 아래, 오른쪽으로 넘치지 않게)
+                let top = buttonRect.bottom - containerRect.top + 5; // 버튼 하단에서 부모컨테이너 top까지의 거리 + 여백
+                let left = buttonRect.left - containerRect.left;     // 버튼 왼쪽에서 부모컨테이너 left까지의 거리
+
+                expDetailColumnTogglePopup.style.top = top + 'px';
+
+                // 팝업이 화면 오른쪽을 벗어나지 않도록 처리
+                const popupWidth = expDetailColumnTogglePopup.offsetWidth;
+                const parentWidth = parentContainer.offsetWidth;
+
+                if (left + popupWidth > parentWidth) {
+                    // 버튼의 오른쪽 끝에 팝업의 오른쪽 끝을 맞추도록 left 조정
+                    left = buttonRect.right - containerRect.left - popupWidth;
+                }
+                // 그래도 화면 왼쪽을 벗어난다면 0으로 설정
+                expDetailColumnTogglePopup.style.left = Math.max(0, left) + 'px';
+                
+                // console.log("[DEBUG] Experience Detail 컬럼 팝업 보임. Top:", expDetailColumnTogglePopup.style.top, "Left:", expDetailColumnTogglePopup.style.left);
+            }
+        }
+
+        document.addEventListener('click', function(event) {
+            if (expDetailColumnTogglePopup && expDetailColumnTogglePopup.style.display === 'block') {
+                const isClickInsideButton = toggleExpDetailColumnsBtn?.contains(event.target);
+                const isClickInsidePopup = expDetailColumnTogglePopup.contains(event.target);
+                if (!isClickInsideButton && !isClickInsidePopup) {
+                    expDetailColumnTogglePopup.style.display = 'none';
+                    // console.log("[DEBUG] 외부 클릭으로 Experience Detail 컬럼 팝업 숨김.");
+                }
+            }
+        });
+
         document.addEventListener('DOMContentLoaded', function() {
-            // 시간당 평균 경험치 가져오기
-            fetch('/api/statistics/experience/v2/average-per-hour') // API 경로 확인
+            fetch('/api/statistics/experience/v2/average-per-hour')
                 .then(response => {
                     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                     return response.json();
                 })
                 .then(data => {
-                    const avgExpElement = document.querySelector('#averageExpPerHour p');
-                    const avgExp = data.average_exp_per_hour; // '시간당평균경험치' -> 'average_exp_per_hour' (스키마 ExpAverageStats 참고)
+                    const avgExp = data.average_exp_per_hour;
                     if (avgExp !== null && avgExp !== undefined) {
-                        const formattedAvgExp = Math.round(avgExp).toLocaleString('ko-KR'); // 소수점 버리고 콤마 추가
-                        avgExpElement.textContent = `${formattedAvgExp} EXP / 시간`;
+                        avgExpTextElement.textContent = `${Math.round(avgExp).toLocaleString('ko-KR')} EXP / 시간`;
                     } else {
-                         avgExpElement.textContent = '데이터 없음';
+                        avgExpTextElement.textContent = '데이터 없음';
                     }
                 })
                 .catch(error => {
                     console.error('시간당 평균 경험치 로딩 오류:', error);
-                    const avgExpElement = document.querySelector('#averageExpPerHour p');
-                    avgExpElement.textContent = '데이터 로딩 실패';
-                    avgExpElement.style.color = 'red';
+                    avgExpTextElement.textContent = '데이터 로딩 실패';
+                    avgExpTextElement.style.color = 'red';
+                    showMessage('시간당 평균 경험치 로딩 실패: ' + error.message, 'error', 5000);
                 });
 
-            // 일별 총 경험치 가져오기
-            fetch('/api/statistics/experience/v2/daily-total') // API 경로 확인
-                .then(response => {
-                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                    return response.json();
-                 })
-                .then(data => {
-                    const dailyExpListElement = document.getElementById('dailyExpList');
-                    dailyExpListElement.innerHTML = ''; // 기존 '로딩 중...' 메시지 제거
+            const today = new Date();
+            const sevenDaysAgo = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 6);
 
-                    const dailyExpData = data.daily_exp; // '일별총경험치' -> 'daily_exp' 로 변경
-                    const sortedDates = Object.keys(dailyExpData).sort().reverse(); // 최신순 정렬
+            startDateFlatpickrExp = flatpickr("#startDate_fp_exp", {
+                dateFormat: "Y-m-d",
+                defaultDate: sevenDaysAgo,
+                locale: "ko"
+            });
+            endDateFlatpickrExp = flatpickr("#endDate_fp_exp", {
+                dateFormat: "Y-m-d",
+                defaultDate: today,
+                locale: "ko"
+            });
+            // console.log("Flatpickr initialized for experience stats filters.");
 
-                    if (sortedDates.length === 0) {
-                        dailyExpListElement.innerHTML = '<p>표시할 데이터가 없습니다.</p>';
-                        return;
-                    }
+            expDetailColumnVisibility = loadColumnVisibility(LS_EXP_DETAIL_COL_VISIBILITY_KEY, expDetailTableColumns);
+            renderExpDetailTableHeaders(); 
+            setupColumnTogglePopupExpDetail(); 
 
-                    const ul = document.createElement('ul');
-                    sortedDates.forEach(date => {
-                        const exp = dailyExpData[date];
-                        const formattedExp = exp.toLocaleString('ko-KR'); // 콤마 추가
-                        const li = document.createElement('li');
-                        li.textContent = `${date}: ${formattedExp} EXP`;
-                        ul.appendChild(li);
-                    });
-                    dailyExpListElement.appendChild(ul);
-                })
-                .catch(error => {
-                    console.error('일별 총 경험치 로딩 오류:', error);
-                    const dailyExpListElement = document.getElementById('dailyExpList');
-                    dailyExpListElement.innerHTML = '<p style="color: red;">데이터 로딩 실패</p>';
-                });
+            if (toggleExpDetailColumnsBtn) {
+                toggleExpDetailColumnsBtn.addEventListener('click', toggleColumnPopupExpDetail); 
+            } else {
+                console.error("toggleExpDetailColumnsBtn not found on experience page!");
+            }
+            
+            loadDailyTotalExp(); 
         });
+
+        async function loadDailyTotalExp() {
+            // console.log("[DEBUG] 1. loadDailyTotalExp 함수 시작");
+            const startDateValue = startDateFlatpickrExp.input.value;
+            const endDateValue = endDateFlatpickrExp.input.value;
+
+            if (!startDateValue || !endDateValue) {
+                showMessage('시작 날짜와 종료 날짜를 모두 선택해주세요.', 'error', 3000); return;
+            }
+            if (new Date(startDateValue) > new Date(endDateValue)) {
+                showMessage('시작 날짜는 종료 날짜보다 이전이거나 같아야 합니다.', 'error', 3000); return;
+            }
+
+            showMessage('일별 상세 경험치 데이터를 불러오는 중...', 'info');
+            const colspanCount = Object.values(expDetailColumnVisibility).filter(v=>v).length || expDetailTableColumns.length;
+
+            if (dailyExpTableBody) {
+                dailyExpTableBody.innerHTML = `<tr><td colspan="${colspanCount}" style="text-align:center;">데이터 로딩 중...</td></tr>`;
+            }
+            if (dailyExpTableFoot) {
+                dailyExpTableFoot.innerHTML = '';
+            }
+            if (dailyExpChartInstance) {
+                dailyExpChartInstance.destroy(); dailyExpChartInstance = null;
+            }
+            
+            const apiUrl = `/api/statistics/experience/v2/daily-details?start_date=${startDateValue}&end_date=${endDateValue}`; 
+            
+            try {
+                const response = await fetch(apiUrl);
+                if (!response.ok) {
+                    let errorDetail = `서버 응답 오류 (${response.status})`;
+                    try { const errorData = await response.json(); errorDetail = errorData.detail || errorDetail; } 
+                    catch (e) { /* 파싱 실패 시 기본 메시지 사용 */ }
+                    throw new Error(errorDetail);
+                }
+
+                const data = await response.json();
+                currentDailyExpData = data.daily_exp || {}; 
+
+                renderDailyExpChart(currentDailyExpData); 
+                renderExpDetailTableHeaders(); 
+                renderDailyExperienceTable(currentDailyExpData); 
+                
+                if (Object.keys(currentDailyExpData).length === 0) {
+                    showMessage('해당 기간의 경험치 데이터가 없습니다.', 'info', 3000);
+                } else {
+                    showMessage(''); 
+                }
+            } catch (error) {
+                showMessage(`일별 경험치 로딩 오류: ${error.message}`, 'error', 5000);
+                // console.error('[DEBUG] loadDailyTotalExp 함수 내 오류 발생:', error);
+                const ctx = document.getElementById('dailyExpChart')?.getContext('2d');
+                if (ctx) {
+                    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height); 
+                    ctx.font = "16px Arial"; ctx.fillStyle = "#888"; ctx.textAlign = "center";
+                    ctx.fillText("데이터 로딩에 실패했습니다.", ctx.canvas.width / 2, ctx.canvas.height / 2);
+                }
+                if (dailyExpTableBody) {
+                     dailyExpTableBody.innerHTML = `<tr><td colspan="${colspanCount}" style="text-align:center; color:red;">데이터 로딩 실패</td></tr>`;
+                }
+            }
+        }
+
+        function renderDailyExpChart(dailyData) {
+            // console.log("[DEBUG Chart] renderDailyExpChart 호출됨. 데이터:", JSON.stringify(dailyData, null, 2));
+            const ctx = document.getElementById('dailyExpChart')?.getContext('2d');
+            if (!ctx) {
+                // console.warn("[DEBUG Chart] Chart context not found.");
+                return;
+            }
+            
+            if (dailyExpChartInstance) {
+                dailyExpChartInstance.destroy();
+                dailyExpChartInstance = null;
+            }
+
+            if (!dailyData || Object.keys(dailyData).length === 0) {
+                ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+                ctx.font = "16px Arial"; ctx.fillStyle = "#888"; ctx.textAlign = "center";
+                ctx.fillText("선택된 기간에 표시할 경험치 데이터가 없습니다.", ctx.canvas.width / 2, ctx.canvas.height / 2);
+                // console.log("[DEBUG Chart] 표시할 데이터 없음.");
+                return;
+            }
+
+            const sortedDates = Object.keys(dailyData).sort((a,b) => new Date(a) - new Date(b));
+            const labels = sortedDates;
+            const dataPointsGainedExp = sortedDates.map(date => dailyData[date]?.gained_exp || 0);
+            // console.log("[DEBUG Chart] Labels:", labels, "DataPoints (Gained Exp):", dataPointsGainedExp);
+
+            dailyExpChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: '일별 총 획득 경험치',
+                        data: dataPointsGainedExp,
+                        borderColor: 'rgb(153, 102, 255)',
+                        backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                        fill: true,
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { callback: function(value) { return value.toLocaleString('ko-KR'); } }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) { label += ': '; }
+                                    if (context.parsed.y !== null) { label += context.parsed.y.toLocaleString('ko-KR'); }
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            // console.log("[DEBUG Chart] 차트 생성 완료.");
+        }
+
+        function renderDailyExperienceTable(dailyData) {
+            // console.log("[DEBUG Table] renderDailyExperienceTable 호출됨. 데이터:", dailyData, "현재 가시성:", expDetailColumnVisibility);
+            if (!dailyExpTableBody || !dailyExpTableFoot) {
+                // console.warn("[DEBUG Table] Table body or footer for expDetail not found.");
+                return;
+            }
+
+            dailyExpTableBody.innerHTML = '';
+            dailyExpTableFoot.innerHTML = '';
+
+            const visibleColumnCount = expDetailTableColumns.filter(col => expDetailColumnVisibility[col.key]).length;
+            const dates = Object.keys(dailyData).sort((a,b) => new Date(a) - new Date(b));
+
+            if (dates.length === 0) {
+                dailyExpTableBody.innerHTML = `<tr><td colspan="${visibleColumnCount}" style="text-align:center;">데이터가 없습니다.</td></tr>`;
+                // console.log("[DEBUG Table] 표시할 경험치 데이터 없음.");
+                return;
+            }
+
+            let totalGainedExpSum = 0;
+
+            dates.forEach(dateStr => {
+                const sessionData = dailyData[dateStr];
+                const row = dailyExpTableBody.insertRow();
+                
+                expDetailTableColumns.forEach(col => {
+                    if (expDetailColumnVisibility[col.key]) {
+                        const cell = row.insertCell();
+                        let value;
+                        if (col.key === 'date') {
+                            value = dateStr;
+                            cell.textContent = value;
+                        } else if (col.key === 'gained_exp') {
+                            value = sessionData?.gained_exp || 0;
+                            cell.textContent = value.toLocaleString('ko-KR');
+                            if (col.class) cell.classList.add(col.class);
+                            totalGainedExpSum += value;
+                        }
+                    }
+                });
+            });
+            // console.log("[DEBUG Table] 테이블 행 생성 완료. 총 획득 경험치 합계:", totalGainedExpSum);
+
+            const footerRow = dailyExpTableFoot.insertRow();
+            footerRow.style.fontWeight = 'bold';
+            footerRow.style.backgroundColor = '#f0f8ff';
+
+            expDetailTableColumns.forEach(col => {
+                if (expDetailColumnVisibility[col.key]) {
+                    const cell = footerRow.insertCell();
+                    if (col.key === 'date') {
+                        cell.textContent = '합계';
+                    } else if (col.key === 'gained_exp') {
+                        cell.textContent = totalGainedExpSum.toLocaleString('ko-KR');
+                        if (col.class) cell.classList.add(col.class);
+                    } else {
+                        cell.textContent = '';
+                    }
+                }
+            });
+            // console.log("[DEBUG Table] 테이블 푸터 생성 완료.");
+        }
+
+        function showMessage(message, type = 'info', duration = 0) {
+            if (!messageArea) return;
+            messageArea.textContent = message;
+            messageArea.className = 'message-area ' + type;
+            messageArea.style.display = message ? 'block' : 'none';
+
+            if (duration > 0) {
+                setTimeout(() => {
+                    if (messageArea.textContent === message && messageArea.style.display === 'block') {
+                        messageArea.style.display = 'none';
+                        messageArea.textContent = '';
+                        messageArea.className = 'message-area';
+                    }
+                }, duration);
+            }
+        }
     </script>
 </body>
 </html>

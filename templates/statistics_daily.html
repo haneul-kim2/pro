@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>일별 요약 통계</title>
+    <title>일별 메소 통계</title>
     <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <style>
-        /* 스타일은 이전 답변과 동일하게 유지 (필요시 style.css로 이동) */
+        /* 기본 스타일 */
         body { font-family: 'Arial', sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; color: #333; display: flex; flex-direction: column; min-height: 100vh; }
-        header { background: #333; color: #fff; padding: 1rem 0; text-align: center; }
+        header { background: #333; color: #fff; padding: 1.8rem 0; text-align: center; }
         header h1 { margin: 0; font-size: 1.8rem; }
         nav { background: #444; padding: 0.5rem 0; }
         nav ul { padding: 0; list-style: none; text-align: center; margin: 0; }
@@ -17,249 +18,548 @@
         nav ul li a { text-decoration: none; color: #fff; padding: 10px 15px; display: inline-block; border-radius: 4px; transition: background-color 0.3s ease; }
         nav ul li a:hover, nav ul li a.active { background-color: #555; }
         main.container { flex-grow: 1; width: 90%; max-width: 1200px; margin: 20px auto; padding: 20px; background-color: #fff; box-shadow: 0 0 10px rgba(0,0,0,0.1); border-radius: 8px; }
-        footer { background: #333; color: #fff; text-align: center; padding: 1rem 0; margin-top: auto; width: 100%; }
+        footer { background: #333; color: #fff; text-align: center; padding: 1rem 0; margin-top: auto; width: 100%; font-size: 0.9em;}
         nav ul li.dropdown { position: relative; display: inline-block; }
         nav ul li.dropdown .dropbtn { cursor: default; }
-        nav ul li.dropdown .dropdown-content { display: none; position: absolute; background-color: #444; min-width: 120px; box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2); z-index: 1; left: 0; border-radius: 0 0 4px 4px; overflow: hidden; }
+        nav ul li.dropdown .dropdown-content { display: none; position: absolute; background-color: #444; min-width: 160px; box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2); z-index: 101; left: 0; border-radius: 0 0 4px 4px; overflow: hidden; }
         nav ul li.dropdown .dropdown-content a { color: white; padding: 10px 15px; text-decoration: none; display: block; text-align: left; white-space: nowrap; }
         nav ul li.dropdown .dropdown-content a:hover { background-color: #555; }
         nav ul li.dropdown:hover .dropdown-content { display: block; }
-        h2 { color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 0; margin-bottom: 20px; }
+        
+        h2, h3 { color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 30px; margin-bottom: 20px; }
+        h2:first-of-type { margin-top: 0; }
+
         .filters { background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin-bottom: 20px; display: flex; gap: 15px; align-items: center; flex-wrap: wrap; border: 1px solid #eee;}
-        .filters label { font-weight: bold; margin-right: 5px; color: #555; }
-        .filters input[type="date"], .filters select { padding: 8px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem; }
-        .filters button { background-color: #5bc0de; color: white; padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer; transition: background-color 0.3s ease; }
-        .filters button:hover { background-color: #31b0d5; }
-        .chart-container { position: relative; height: 40vh; width: 100%; margin-bottom: 30px; }
-        #dailyChart { border: 1px solid #eee; border-radius: 5px; background-color: #fff; padding: 10px; }
-        .table-container { overflow-x: auto; margin-top: 20px; }
-        table { width: 100%; border-collapse: collapse; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        th, td { border: 1px solid #e0e0e0; padding: 10px 12px; text-align: left; vertical-align: middle; font-size: 0.9rem; }
-        th { background-color: #f8f8f8; font-weight: bold; color: #333; text-transform: uppercase; font-size: 0.85rem; }
+        .filters label { font-weight: bold; margin-right: 5px; color: #555; font-size: 0.9rem;}
+        .filters input[type="text"], .filters select { padding: 8px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem; }
+        
+        /* "조회" 버튼 스타일 변경 (파란색 계열) */
+        .filters button.query-button { 
+            background-color: #5bc0de; /* 기준 파일 파란색 */
+            color: white; padding: 8px 15px; border: none; border-radius: 4px; 
+            cursor: pointer; transition: background-color 0.3s ease; font-size: 0.9rem;
+        }
+        .filters button.query-button:hover { background-color: #31b0d5; } /* 기준 파일 파란색 호버 */
+
+        .chart-container { position: relative; height: 45vh; width: 100%; margin-bottom: 30px; padding:10px; border: 1px solid #eee; border-radius: 5px;}
+        
+        .detail-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .detail-header h3 { margin-bottom: 0; border-bottom: none; }
+
+        /* "컬럼 표시 설정" 버튼을 감싸는 div 스타일 */
+        .table-controls {
+            position: relative; /* 팝업 위치의 기준점 */
+        }
+        /* "컬럼 표시 설정" 버튼 스타일 변경 (녹색 계열) */
+        .table-action-button { 
+            background-color: #5cb85c; /* 기준 파일 녹색 */
+            color: white; padding: 5px 10px; border: none; border-radius: 4px; 
+            cursor: pointer; font-size: 0.9em; transition: background-color 0.3s ease;
+        }
+        .table-action-button:hover { background-color: #4cae4c; }
+
+
+        .column-toggle-popup {
+            display: none; 
+            position: absolute; 
+            background-color: white;
+            border: 1px solid #ccc;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 15px;
+            z-index: 1050; /* flatpickr 보다 높거나 같게 */
+            max-height: 300px; 
+            overflow-y: auto;
+            text-align: left;
+            min-width: 200px;
+            border-radius: 4px;
+            /* right: 0;  JS에서 위치를 계산하므로 고정 right 제거 */
+        }
+        .column-toggle-popup label {
+            display: block; margin-bottom: 8px; font-size: 0.9em;
+            user-select: none; cursor: pointer; white-space: nowrap; 
+            overflow: hidden; text-overflow: ellipsis;
+        }
+        .column-toggle-popup input[type="checkbox"] { margin-right: 8px; vertical-align: middle; }
+        .column-toggle-popup button.popup-close-btn {
+            display: block; width: 100%; margin-top: 10px; padding: 8px; font-size: 0.9em;
+            background-color: #6c757d; color: white; border: none; border-radius: 3px; cursor: pointer;
+        }
+        .column-toggle-popup button.popup-close-btn:hover { background-color: #5a6268; }
+
+        .table-container { overflow-x: auto; margin-top: 10px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        th, td { border: 1px solid #e0e0e0; padding: 8px 10px; text-align: left; vertical-align: middle; font-size: 0.85rem; white-space: nowrap; }
+        th { background-color: #f8f8f8; font-weight: bold; color: #333; font-size: 0.8rem; text-transform: none;}
         tbody tr:nth-child(even) { background-color: #fdfdfd; }
         tbody tr:hover { background-color: #f0f0f0; }
-        td { color: #555; }
-        td:not(:first-child) { text-align: right; }
-        .message-area { padding: 15px; margin-bottom: 20px; border-radius: 4px; border: 1px solid transparent; }
+        tfoot tr { background-color: #e9ecef; font-weight: bold; }
+        td.number-cell, th.number-cell { text-align: right; }
+
+        .message-area { padding: 15px; margin-bottom: 20px; border-radius: 4px; border: 1px solid transparent; display: none;}
         .message-area.error { background-color: #f2dede; color: #a94442; border-color: #ebccd1; }
-        .message-area:empty { display: none; }
+        .message-area.info { background-color: #d9edf7; color: #31708f; border-color: #bce8f1; }
+        .flatpickr-calendar { z-index: 1051 !important; } /* 팝업보다 높은 z-index */
     </style>
 </head>
 <body>
     <header>
-        <h1>메이플스토리 수익 기록 웹</h1>
+        <h1>메랜통계</h1>
     </header>
 
-<!-- 네비게이션 바 - 순서 및 이름 변경 -->
- <!-- 네비게이션 바 - 순서 및 이름 변경 -->
-<nav>
-    <ul>
-        <!-- 1. 홈 -->
-        <li><a href="{{ url_for('home') }}">홈</a></li> <!-- 'active' 클래스는 페이지별로 다를 수 있으니 일단 빼고 복사하거나, 나중에 각 페이지에 맞게 수정 -->
+    <nav>
+        <ul>
+            <li><a href="{{ url_for('home') }}" class="{{ 'active' if request.url.path == url_for('home') else '' }}">홈</a></li>
+            <li><a href="{{ url_for('list_and_add_hunting_sessions') }}" class="{{ 'active' if 'hunting-sessions' in request.url.path else '' }}">사냥</a></li>
+            <li><a href="{{ url_for('list_and_add_jjul_sessions') }}" class="{{ 'active' if 'jjul-sessions' in request.url.path else '' }}">쩔</a></li>
+            
+            <li class="dropdown">
+                <a href="javascript:void(0)" class="dropbtn {{ 'active' if request.url.path.startswith((url_for('statistics_experience_daily')|string).rsplit('/', 1)[0]) else '' }}">경험치 통계</a>
+                <div class="dropdown-content">
+                    <a href="{{ url_for('statistics_experience_daily') }}" class="{{ 'active' if request.url.path == url_for('statistics_experience_daily') else '' }}">일별 경험치</a>
+                    <a href="{{ url_for('statistics_experience_weekday') }}" class="{{ 'active' if request.url.path == url_for('statistics_experience_weekday') else '' }}">요일별 경험치</a>
+                    <a href="{{ url_for('statistics_experience_map') }}" class="{{ 'active' if request.url.path == url_for('statistics_experience_map') else '' }}">맵별 경험치</a>
+                    </div>
+            </li>
 
-        <!-- 2. 사냥 -->
-        <li><a href="{{ url_for('list_and_add_hunting_sessions') }}">사냥</a></li>
-
-        <!-- 3. 쩔 -->
-        <li><a href="{{ url_for('list_and_add_jjul_sessions') }}">쩔</a></li>
-
-        <!-- 4. 경험치 통계 (신규 추가) -->
-        <li><a href="{{ url_for('statistics_experience') }}">경험치 통계</a></li>
-
-        <!-- 5. 통계 (드롭다운) -->
-        <li class="dropdown">
-            <a href="javascript:void(0)" class="dropbtn">통계</a>
-            <div class="dropdown-content">
-                <a href="{{url_for('statistics_daily') }}">일별 요약</a>
-                <a href="{{ url_for('statistics_map') }}">맵별 요약</a>
-                <a href="{{ url_for('statistics_weekday') }}">요일별 요약</a>
-            </div>
-        </li>
-
-        <!-- 6. 메소 판매 기록 (이름 변경) -->
-        <li><a href="{{ url_for('list_and_add_meso_sales') }}">메소 판매 기록</a></li>
-    </ul>
-</nav>
-    <!-- 네비게이션 바 끝 -->
+            <li class="dropdown">
+                <a href="javascript:void(0)" class="dropbtn {{ 'active' if request.url.path.startswith((url_for('statistics_daily')|string).rsplit('/', 1)[0]) and not request.url.path.startswith((url_for('statistics_experience_daily')|string).rsplit('/', 1)[0]) else '' }}">메소 통계</a>
+                <div class="dropdown-content">
+                    <a href="{{ url_for('statistics_daily') }}" class="{{ 'active' if request.url.path == url_for('statistics_daily') else '' }}">일별 메소</a>
+                    <a href="{{ url_for('statistics_weekday') }}" class="{{ 'active' if request.url.path == url_for('statistics_weekday') else '' }}">요일별 메소</a>
+                    <a href="{{ url_for('statistics_map') }}" class="{{ 'active' if request.url.path == url_for('statistics_map') else '' }}">맵별 메소</a>
+                </div>
+            </li>
+            <li><a href="{{ url_for('list_and_add_meso_sales') }}" class="{{ 'active' if 'meso-sales' in request.url.path else '' }}">쌀먹 장부</a></li>
+            <li><a href="{{ url_for('info_page') }}" class="active">정보</a></li>
+        </ul>
+    </nav>
 
     <main class="container">
-        <h2>일별 요약 통계</h2>
+        <h2>일별 메소 통계</h2>
         <div id="message-area-daily" class="message-area"></div>
+
         <div class="filters">
-            <label for="startDate">시작 날짜:</label>
-            <input type="date" id="startDate">
-            <label for="endDate">종료 날짜:</label>
-            <input type="date" id="endDate">
-            <button onclick="loadDailyStats()">조회</button>
-            <label for="chartDataSelect" style="margin-left: auto;">차트 데이터:</label>
-            <select id="chartDataSelect" onchange="updateDailyChart()">
-                <option value="net_profit">순수익</option>
-                <option value="total_profit">총수익</option>
-                <option value="hunting_meso">사냥 메소</option>
-                <option value="jjul_profit">쩔 수익</option>
-                <option value="rare_item_profit">고가템 수익</option>
-                <option value="normal_item_profit">일반템 수익</option>
-                <option value="consumable_gained_profit">소모템 획득 수익</option>
-                <option value="consumable_cost">소모 아이템비</option>
-                <option value="entry_fee">지참비</option>
-                <option value="cash_sold_krw">현금화 금액</option>
-            </select>
+            <label for="startDate_fp">시작 날짜:</label>
+            <input type="text" id="startDate_fp" placeholder="날짜 선택...">
+            <label for="endDate_fp">종료 날짜:</label>
+            <input type="text" id="endDate_fp" placeholder="날짜 선택...">
+            <button onclick="loadDailyStats()" class="query-button">조회</button>
+            <span style="margin-left: 20px;">
+                <label for="chartDataSelect">차트 데이터:</label>
+                <select id="chartDataSelect" onchange="updateAndRenderDailyChart()">
+                    <option value="net_profit">순수익</option>
+                    <option value="total_profit">총수익</option>
+                    <option value="hunting_meso">사냥메소</option>
+                    <option value="jjul_profit">쩔수익</option>
+                    <option value="rare_item_profit">고가템수익</option>
+                    <option value="normal_item_profit">일반템수익</option>
+                    <option value="consumable_gained_profit">소모템획득</option>
+                    <option value="consumable_cost">소모템비용</option>
+                    <option value="entry_fee">입장료</option>
+                    <option value="cash_sold_krw">현금화(원)</option>
+                </select>
+            </span>
         </div>
+
         <div class="chart-container">
             <canvas id="dailyChart"></canvas>
         </div>
-        <h3>상세 데이터</h3>
+        
+        <div class="detail-header">
+            <h3>일별 상세 수익 내역</h3>
+            <div class="table-controls">
+                <button type="button" id="toggleDailyColumnsBtn" class="table-action-button">컬럼 표시 설정</button>
+                <div id="dailyColumnTogglePopup" class="column-toggle-popup">
+                    </div>
+            </div>
+        </div>
+
         <div class="table-container">
             <table id="dailyStatsTable">
                 <thead>
-                    <tr>
-                        <th>날짜</th> <th>사냥메소</th> <th>쩔수익</th> <th>고가템수익</th>
-                        <th>일반템수익</th> <th>소모템획득수익</th> <th>소모아이템비</th> <th>지참비</th>
-                        <th>총수익</th> <th>순수익</th> <th>현금화금액(원)</th>
-                    </tr>
                 </thead>
-                <tbody>
-                    <tr> <td colspan="11" style="text-align:center;">데이터를 조회해주세요.</td> </tr>
+                <tbody id="dailyTableBody">
                 </tbody>
-                 <tfoot>
-                 </tfoot>
+                <tfoot id="dailyTableFoot">
+                </tfoot>
             </table>
         </div>
     </main>
 
     <footer>
-        <p>&copy; 2025 의문의돌맹이. All rights reserved.</p>
+        <p>© 2025 의문의돌맹이. All rights reserved.</p>
     </footer>
 
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://npmcdn.com/flatpickr/dist/l10n/ko.js"></script>
     <script>
-        // JavaScript 코드는 이전 답변과 동일하게 유지 (API URL 변경 없음)
-        const startDateInput = document.getElementById('startDate');
-        const endDateInput = document.getElementById('endDate');
-        const chartDataSelect = document.getElementById('chartDataSelect');
-        const dailyTableBody = document.getElementById('dailyStatsTable').getElementsByTagName('tbody')[0];
-        const dailyTableFoot = document.getElementById('dailyStatsTable').getElementsByTagName('tfoot')[0];
+        Chart.defaults.font.family = "'Noto Sans KR', sans-serif";
+        Chart.defaults.font.size = 11;
+        Chart.defaults.color = '#a0a0a0';
+        Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.08)';
+        
+        const dailyStatsTable = document.getElementById('dailyStatsTable');
+        const dailyTableBody = document.getElementById('dailyTableBody');
+        const dailyTableFoot = document.getElementById('dailyTableFoot');
         const messageArea = document.getElementById('message-area-daily');
         let dailyChart = null;
         let currentDailyData = [];
 
+        let startDateFlatpickr = null;
+        let endDateFlatpickr = null;
+
+        const toggleDailyColumnsBtn = document.getElementById('toggleDailyColumnsBtn');
+        const dailyColumnTogglePopup = document.getElementById('dailyColumnTogglePopup');
+        const chartDataSelect = document.getElementById('chartDataSelect');
+
+        const LS_DAILY_COL_VISIBILITY_KEY = 'dailyTableColumnVisibility_v1';
+
+        const dailyTableColumns = [
+            { key: 'date', header: '날짜', defaultVisible: true, type: 'string' },
+            { key: 'hunting_meso', header: '사냥메소', defaultVisible: true, type: 'number', class: 'number-cell' },
+            { key: 'jjul_profit', header: '쩔수익', defaultVisible: true, type: 'number', class: 'number-cell' },
+            { key: 'rare_item_profit', header: '고가템수익', defaultVisible: false, type: 'number', class: 'number-cell' },
+            { key: 'normal_item_profit', header: '일반템수익', defaultVisible: false, type: 'number', class: 'number-cell' },
+            { key: 'consumable_gained_profit', header: '소모템획득', defaultVisible: false, type: 'number', class: 'number-cell' },
+            { key: 'consumable_cost', header: '소모템비용', defaultVisible: true, type: 'number', class: 'number-cell' },
+            { key: 'entry_fee', header: '입장료', defaultVisible: true, type: 'number', class: 'number-cell' },
+            { key: 'total_profit', header: '총수익', defaultVisible: true, type: 'number', class: 'number-cell' },
+            { key: 'net_profit', header: '순수익', defaultVisible: true, type: 'number', class: 'number-cell' },
+            { key: 'cash_sold_krw', header: '현금화(원)', defaultVisible: true, type: 'number', class: 'number-cell' }
+        ];
+
+        let dailyColumnVisibility = {};
+
+        function loadColumnVisibility(key, columnsConfig) {
+            const savedVisibility = localStorage.getItem(key);
+            let visibility = {};
+            if (savedVisibility) {
+                try { 
+                    const parsed = JSON.parse(savedVisibility);
+                    columnsConfig.forEach(col => {
+                        if (col.noToggle) { visibility[col.key] = true; }
+                        else if (parsed[col.key] === undefined) { visibility[col.key] = col.defaultVisible !== undefined ? col.defaultVisible : true; }
+                        else { visibility[col.key] = parsed[col.key]; }
+                    });
+                    return visibility;
+                } catch(e) { console.error("Error parsing column visibility from LS for " + key, e); }
+            }
+            columnsConfig.forEach(col => {
+                if (!col.noToggle) {
+                    visibility[col.key] = col.defaultVisible !== undefined ? col.defaultVisible : true;
+                } else {
+                    visibility[col.key] = true; 
+                }
+            });
+            return visibility;
+        }
+
+        function saveColumnVisibility(key, visibilityConfig) {
+            localStorage.setItem(key, JSON.stringify(visibilityConfig));
+        }
+
+        function renderDailyTableHeaders() {
+            const tableHead = dailyStatsTable?.getElementsByTagName('thead')[0];
+            if (!tableHead) { console.error("dailyStatsTable thead not found!"); return; }
+            
+            tableHead.innerHTML = ''; 
+            const headerRow = tableHead.insertRow();
+            dailyTableColumns.forEach(col => {
+                if (dailyColumnVisibility[col.key]) {
+                    const th = document.createElement('th');
+                    th.textContent = col.header;
+                    if (col.class && col.class.includes('number-cell')) {
+                         th.classList.add('number-cell');
+                    }
+                    headerRow.appendChild(th);
+                }
+            });
+        }
+        
         document.addEventListener('DOMContentLoaded', () => {
             const today = new Date();
             const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-            endDateInput.value = today.toISOString().split('T')[0];
-            startDateInput.value = firstDayOfMonth.toISOString().split('T')[0];
+
+            startDateFlatpickr = flatpickr("#startDate_fp", {
+                dateFormat: "Y-m-d", defaultDate: firstDayOfMonth, locale: "ko"
+            });
+            endDateFlatpickr = flatpickr("#endDate_fp", {
+                dateFormat: "Y-m-d", defaultDate: today, locale: "ko"
+            });
+            
+            dailyColumnVisibility = loadColumnVisibility(LS_DAILY_COL_VISIBILITY_KEY, dailyTableColumns);
+            renderDailyTableHeaders(); 
+            setupColumnTogglePopupDaily();
+
+            if (toggleDailyColumnsBtn) {
+                toggleDailyColumnsBtn.addEventListener('click', toggleColumnPopupDaily);
+            } else {
+                console.error("toggleDailyColumnsBtn not found!");
+            }
+            
             loadDailyStats();
         });
 
         async function loadDailyStats() {
-            const startDate = startDateInput.value;
-            const endDate = endDateInput.value;
-            if (!startDate || !endDate) { showMessage('시작 날짜와 종료 날짜를 모두 선택해주세요.', 'error'); return; }
-            if (startDate > endDate) { showMessage('시작 날짜는 종료 날짜보다 이전이어야 합니다.', 'error'); return; }
-            showMessage('');
-            dailyTableBody.innerHTML = '<tr><td colspan="11" style="text-align:center;">데이터를 불러오는 중...</td></tr>';
-            dailyTableFoot.innerHTML = '';
-            const apiUrl = `/api/statistics/daily?start_date=${startDate}&end_date=${endDate}`; // API URL 유지
+            const startDate = startDateFlatpickr.input.value;
+            const endDate = endDateFlatpickr.input.value;
+
+            if (!startDate || !endDate) {
+                showMessage('시작 날짜와 종료 날짜를 모두 선택해주세요.', 'error', 3000); return;
+            }
+            if (new Date(startDate) > new Date(endDate)) {
+                showMessage('시작 날짜는 종료 날짜보다 이전이거나 같아야 합니다.', 'error', 3000); return;
+            }
+            showMessage('일별 통계 데이터 로딩 중...', 'info');
+            const colspanCount = Object.values(dailyColumnVisibility).filter(v => v).length || dailyTableColumns.length;
+            if(dailyTableBody) dailyTableBody.innerHTML = `<tr><td colspan="${colspanCount}" style="text-align:center;">데이터 로딩 중...</td></tr>`;
+            if(dailyTableFoot) dailyTableFoot.innerHTML = '';
+
+            const apiUrl = `/api/statistics/summary/daily?start_date=${startDate}&end_date=${endDate}`;
+            
             try {
                 const response = await fetch(apiUrl);
                 if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({ detail: '데이터 로드 실패' }));
-                    throw new Error(errorData.detail || `서버 응답 오류: ${response.status}`);
+                    const errorData = await response.json().catch(() => null);
+                    throw new Error(errorData?.detail || `서버 응답 오류: ${response.status}`);
                 }
-                currentDailyData = await response.json();
+                const result = await response.json();
+                currentDailyData = result.summaries || [];
+                
+                renderDailyTableHeaders(); 
                 renderDailyTable(currentDailyData);
-                updateDailyChart();
+                updateAndRenderDailyChart();
+
+                if (currentDailyData.length === 0) {
+                    showMessage('해당 기간의 데이터가 없습니다.', 'info', 3000);
+                } else {
+                    showMessage('');
+                }
             } catch (error) {
-                showMessage(`오류: ${error.message}`, 'error');
-                dailyTableBody.innerHTML = `<tr><td colspan="11" style="text-align:center; color: red;">데이터 로드 실패</td></tr>`;
-                console.error('Error loading daily statistics:', error);
+                showMessage(`데이터 로딩 오류: ${error.message}`, 'error', 5000);
+                console.error('loadDailyStats 오류:', error);
+                const errorColspan = Object.values(dailyColumnVisibility).filter(v => v).length || dailyTableColumns.length;
+                if(dailyTableBody) dailyTableBody.innerHTML = `<tr><td colspan="${errorColspan}" style="text-align:center; color:red;">데이터 로딩 실패</td></tr>`;
+                if (dailyChart) { dailyChart.destroy(); dailyChart = null; }
             }
         }
 
         function renderDailyTable(data) {
-            dailyTableBody.innerHTML = '';
+            if(!dailyTableBody || !dailyTableFoot) {
+                 console.error("Daily table body or foot not found!"); return;
+            }
+            dailyTableBody.innerHTML = ''; 
             dailyTableFoot.innerHTML = '';
+
+            const visibleColumnCount = dailyTableColumns.filter(col => dailyColumnVisibility[col.key]).length;
+
             if (!data || data.length === 0) {
-                dailyTableBody.innerHTML = '<tr><td colspan="11" style="text-align:center;">해당 기간의 데이터가 없습니다.</td></tr>';
+                dailyTableBody.innerHTML = `<tr><td colspan="${visibleColumnCount}" style="text-align:center;">해당 기간의 데이터가 없습니다.</td></tr>`;
                 return;
             }
-            data.sort((a, b) => new Date(a.date) - new Date(b.date));
+            
+            data.sort((a, b) => new Date(a.date) - new Date(b.date)); 
+            
+            let totals = {};
+            dailyTableColumns.forEach(col => {
+                if (col.type === 'number') { totals[col.key] = 0; }
+            });
+
             data.forEach(item => {
                 const row = dailyTableBody.insertRow();
-                row.insertCell().textContent = item.date;
-                row.insertCell().textContent = (item.hunting_meso || 0).toLocaleString();
-                row.insertCell().textContent = (item.jjul_profit || 0).toLocaleString();
-                row.insertCell().textContent = (item.rare_item_profit || 0).toLocaleString();
-                row.insertCell().textContent = (item.normal_item_profit || 0).toLocaleString();
-                row.insertCell().textContent = (item.consumable_gained_profit || 0).toLocaleString();
-                row.insertCell().textContent = (item.consumable_cost || 0).toLocaleString();
-                row.insertCell().textContent = (item.entry_fee || 0).toLocaleString();
-                row.insertCell().textContent = (item.total_profit || 0).toLocaleString();
-                row.insertCell().textContent = (item.net_profit || 0).toLocaleString();
-                row.insertCell().textContent = (item.cash_sold_krw || 0).toLocaleString();
+                dailyTableColumns.forEach(col => {
+                    if (dailyColumnVisibility[col.key]) {
+                        const cell = row.insertCell();
+                        let value = item[col.key];
+                        if (col.type === 'number') {
+                            value = (value !== null && value !== undefined) ? Number(value) : 0;
+                            cell.textContent = value.toLocaleString('ko-KR');
+                            cell.classList.add('number-cell');
+                            totals[col.key] += value;
+                        } else {
+                            cell.textContent = value || '';
+                        }
+                    }
+                });
             });
-            const totals = data.reduce((acc, item) => {
-                acc.hunting_meso += item.hunting_meso || 0;
-                acc.jjul_profit += item.jjul_profit || 0;
-                acc.rare_item_profit += item.rare_item_profit || 0;
-                acc.normal_item_profit += item.normal_item_profit || 0;
-                acc.consumable_gained_profit += item.consumable_gained_profit || 0;
-                acc.consumable_cost += item.consumable_cost || 0;
-                acc.entry_fee += item.entry_fee || 0;
-                acc.total_profit += item.total_profit || 0;
-                acc.net_profit += item.net_profit || 0;
-                acc.cash_sold_krw += item.cash_sold_krw || 0;
-                return acc;
-            }, { hunting_meso: 0, jjul_profit: 0, rare_item_profit: 0, normal_item_profit: 0, consumable_gained_profit: 0, consumable_cost: 0, entry_fee: 0, total_profit: 0, net_profit: 0, cash_sold_krw: 0 });
-            const footerRow = dailyTableFoot.insertRow();
-            footerRow.style.fontWeight = 'bold';
-            footerRow.style.backgroundColor = '#f8f8f8';
-            footerRow.insertCell().textContent = '합계';
-            footerRow.insertCell().textContent = totals.hunting_meso.toLocaleString();
-            footerRow.insertCell().textContent = totals.jjul_profit.toLocaleString();
-            footerRow.insertCell().textContent = totals.rare_item_profit.toLocaleString();
-            footerRow.insertCell().textContent = totals.normal_item_profit.toLocaleString();
-            footerRow.insertCell().textContent = totals.consumable_gained_profit.toLocaleString();
-            footerRow.insertCell().textContent = totals.consumable_cost.toLocaleString();
-            footerRow.insertCell().textContent = totals.entry_fee.toLocaleString();
-            footerRow.insertCell().textContent = totals.total_profit.toLocaleString();
-            footerRow.insertCell().textContent = totals.net_profit.toLocaleString();
-            footerRow.insertCell().textContent = totals.cash_sold_krw.toLocaleString();
-        }
 
-        function updateDailyChart() {
+            if (Object.keys(totals).length > 0 && data.length > 0) { // 데이터가 있을 때만 합계 표시
+                const footerRow = dailyTableFoot.insertRow();
+                footerRow.style.fontWeight = 'bold';
+                dailyTableColumns.forEach(col => {
+                    if (dailyColumnVisibility[col.key]) {
+                        const cell = footerRow.insertCell();
+                        if (col.key === 'date') {
+                            cell.textContent = '합계';
+                        } else if (col.type === 'number') {
+                            cell.textContent = (totals[col.key] || 0).toLocaleString('ko-KR');
+                            cell.classList.add('number-cell');
+                        } else {
+                            cell.textContent = '';
+                        }
+                    }
+                });
+            }
+        }
+        
+        function updateAndRenderDailyChart() {
+            const canvas = document.getElementById('dailyChart');
+            if (!canvas) { console.error("dailyChart canvas not found"); return; }
+            const ctx = canvas.getContext('2d');
+            if (!ctx) { console.error("Canvas context not found"); return; }
+
+            if (dailyChart) { dailyChart.destroy(); dailyChart = null; }
+
             if (!currentDailyData || currentDailyData.length === 0) {
-                 if (dailyChart) { dailyChart.destroy(); dailyChart = null; }
+                ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+                ctx.font = "16px Arial"; ctx.fillStyle = "#888"; ctx.textAlign = "center";
+                ctx.fillText("차트에 표시할 데이터가 없습니다.", ctx.canvas.width / 2, ctx.canvas.height / 2);
                 return;
             }
+            
             const selectedKey = chartDataSelect.value;
-            const selectedLabel = chartDataSelect.options[chartDataSelect.selectedIndex].text;
+            const selectedOption = chartDataSelect.options[chartDataSelect.selectedIndex];
+            const selectedLabel = selectedOption ? selectedOption.text : '데이터';
+            
             const labels = currentDailyData.map(item => item.date);
-            const dataPoints = currentDailyData.map(item => item[selectedKey] || 0);
-            const chartConfig = {
+            const dataPoints = currentDailyData.map(item => (item[selectedKey] !== null && item[selectedKey] !== undefined ? Number(item[selectedKey]) : 0));
+            
+            dailyChart = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: labels,
-                    datasets: [{ label: selectedLabel, data: dataPoints, borderColor: getRandomColor(), backgroundColor: 'rgba(75, 192, 192, 0.2)', fill: false, tension: 0.1 }]
+                    datasets: [{
+                        label: selectedLabel, data: dataPoints,
+                        borderColor: 'rgb(75, 192, 192)', backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        fill: false, tension: 0.1
+                    }]
                 },
                 options: {
                     responsive: true, maintainAspectRatio: false,
-                    scales: { y: { beginAtZero: true, ticks: { callback: value => value.toLocaleString() } } },
-                    plugins: { tooltip: { callbacks: { label: context => `${context.dataset.label || ''}: ${context.parsed.y !== null ? context.parsed.y.toLocaleString() : ''}` } } }
+                    interaction: { mode: 'index', intersect: false, },
+                    scales: {
+                        x: { title: { display: true, text: '날짜' } },
+                        y: { 
+                            type: 'linear', display: true, position: 'left',
+                            title: { display: true, text: selectedLabel },
+                            ticks: { callback: value => value.toLocaleString('ko-KR') }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) { label += ': '; }
+                                    if (context.parsed.y !== null) {
+                                        label += context.parsed.y.toLocaleString('ko-KR');
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    }
                 }
-            };
-            const ctx = document.getElementById('dailyChart').getContext('2d');
-            if (dailyChart) { dailyChart.destroy(); }
-            dailyChart = new Chart(ctx, chartConfig);
+            });
         }
 
-        function showMessage(message, type = 'info') {
+        function showMessage(message, type = 'info', duration = 0) {
+            if (!messageArea) return;
             messageArea.textContent = message;
             messageArea.className = 'message-area ' + type;
+            messageArea.style.display = message ? 'block' : 'none';
+
+            if (duration > 0) {
+                setTimeout(() => {
+                    if (messageArea.textContent === message && messageArea.style.display === 'block') {
+                        messageArea.style.display = 'none';
+                        messageArea.textContent = '';
+                        messageArea.className = 'message-area';
+                    }
+                }, duration);
+            }
         }
 
-        function getRandomColor() {
-            const r = Math.floor(Math.random() * 200); const g = Math.floor(Math.random() * 200); const b = Math.floor(Math.random() * 200);
-            return `rgb(${r}, ${g}, ${b})`;
+        function setupColumnTogglePopupDaily() {
+            if (!dailyColumnTogglePopup || !toggleDailyColumnsBtn) { return; }
+            dailyColumnTogglePopup.innerHTML = '';
+
+            dailyTableColumns.forEach(col => {
+                if (col.noToggle) return; 
+                const checkboxId = `col-toggle-daily-${col.key}`;
+                const label = document.createElement('label');
+                label.htmlFor = checkboxId;
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox'; checkbox.id = checkboxId; checkbox.value = col.key;
+                checkbox.checked = !!dailyColumnVisibility[col.key];
+                checkbox.addEventListener('change', function() {
+                    dailyColumnVisibility[this.value] = this.checked;
+                    saveColumnVisibility(LS_DAILY_COL_VISIBILITY_KEY, dailyColumnVisibility);
+                    renderDailyTableHeaders(); 
+                    renderDailyTable(currentDailyData); 
+                });
+                label.appendChild(checkbox);
+                label.appendChild(document.createTextNode(` ${col.header}`));
+                dailyColumnTogglePopup.appendChild(label);
+            });
+
+            const closeButton = document.createElement('button');
+            closeButton.textContent = '닫기';
+            closeButton.classList.add('popup-close-btn');
+            closeButton.onclick = function() { toggleColumnPopupDaily(); };
+            dailyColumnTogglePopup.appendChild(closeButton);
         }
+
+        function toggleColumnPopupDaily() {
+            if (!dailyColumnTogglePopup || !toggleDailyColumnsBtn) { return; }
+            const isVisible = dailyColumnTogglePopup.style.display === 'block';
+            if (isVisible) {
+                dailyColumnTogglePopup.style.display = 'none';
+            } else {
+                dailyColumnTogglePopup.style.display = 'block';
+                const buttonRect = toggleDailyColumnsBtn.getBoundingClientRect();
+                // The popup should be positioned relative to 'table-controls'
+                const parentControls = toggleDailyColumnsBtn.closest('.table-controls');
+                if (!parentControls) {
+                    console.error(".table-controls parent not found for popup positioning.");
+                    // Fallback positioning if .table-controls is not found (e.g. relative to button's direct parent)
+                    const parentRect = toggleDailyColumnsBtn.parentElement.getBoundingClientRect();
+                    dailyColumnTogglePopup.style.top = (buttonRect.bottom - parentRect.top + 5) + 'px';
+                    dailyColumnTogglePopup.style.left = Math.max(0, buttonRect.right - parentRect.left - dailyColumnTogglePopup.offsetWidth) + 'px';
+                    return;
+                }
+                const parentControlsRect = parentControls.getBoundingClientRect();
+
+                // Position popup below the button.
+                let top = buttonRect.bottom - parentControlsRect.top + 5; // 5px gap
+                // Align right edge of popup with right edge of button, or button's left if not enough space.
+                let left = buttonRect.right - parentControlsRect.left - dailyColumnTogglePopup.offsetWidth;
+                
+                // If aligning right makes it too far left (e.g. button is narrow or popup wide)
+                // try aligning left edge of popup with left edge of button.
+                if (left < 0 || (buttonRect.left - parentControlsRect.left + dailyColumnTogglePopup.offsetWidth > parentControls.offsetWidth) ) {
+                     left = buttonRect.left - parentControlsRect.left;
+                }
+                 // Ensure popup does not overflow parent's right boundary
+                if (left + dailyColumnTogglePopup.offsetWidth > parentControls.offsetWidth) {
+                    left = parentControls.offsetWidth - dailyColumnTogglePopup.offsetWidth - 5; // 5px margin from right
+                }
+                // Ensure popup does not overflow parent's left boundary (e.g. if page is very narrow)
+                left = Math.max(0, left);
+
+
+                dailyColumnTogglePopup.style.top = `${top}px`;
+                dailyColumnTogglePopup.style.left = `${left}px`;
+            }
+        }
+
+        document.addEventListener('click', function(event) {
+            if (dailyColumnTogglePopup && dailyColumnTogglePopup.style.display === 'block') {
+                if (!toggleDailyColumnsBtn?.contains(event.target) && !dailyColumnTogglePopup.contains(event.target)) {
+                    dailyColumnTogglePopup.style.display = 'none';
+                }
+            }
+        });
     </script>
 </body>
+</html>

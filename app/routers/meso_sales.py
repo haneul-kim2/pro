@@ -25,6 +25,21 @@ async def create_new_meso_sale(
     except Exception as e:
         print(f"Error creating meso sale: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="메소 판매 기록 생성 중 내부 서버 오류 발생")
+# === ✨ 새로운 API 라우트 추가 시작: 삭제 기능 ✨ ===
+
+@router.delete("/{sale_id}", response_model=schemas.DeleteResponse, status_code=status.HTTP_200_OK)
+async def delete_single_meso_sale(sale_id: int, db: Session = Depends(get_db)):
+    success = crud.delete_meso_sale(db=db, log_id=sale_id)
+    if not success:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="해당 ID의 메소 판매 기록을 찾을 수 없습니다.")
+    return schemas.DeleteResponse(message="메소 판매 기록이 성공적으로 삭제되었습니다.", deleted_id=sale_id)
+
+@router.delete("/all/", response_model=schemas.DeleteResponse, status_code=status.HTTP_200_OK)
+async def delete_all_meso_sale_records(db: Session = Depends(get_db)):
+    num_deleted = crud.delete_all_meso_sales(db=db)
+    return schemas.DeleteResponse(message=f"총 {num_deleted}개의 메소 판매 기록이 삭제되었습니다.", deleted_count=num_deleted)
+
+# === ✨ 새로운 API 라우트 추가 끝 ✨ ===
 
 @router.get("/", response_model=List[schemas.MesoSale])
 async def read_all_meso_sales(

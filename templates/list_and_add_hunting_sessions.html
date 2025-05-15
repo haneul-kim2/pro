@@ -5,514 +5,1107 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>사냥 기록</title>
     <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <style>
-        /* --- 기본 레이아웃 (style.css 로 이동 권장) --- */
+        /* 기본 스타일 (쩔 기록 페이지 스타일 기반으로 조정) */
         body { font-family: 'Arial', sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; color: #333; display: flex; flex-direction: column; min-height: 100vh; }
-        header { background: #333; color: #fff; padding: 1rem 0; text-align: center; }
+        header { background: #333; color: #fff; padding: 1.8rem 0; text-align: center; }
         header h1 { margin: 0; font-size: 1.8rem; }
         nav { background: #444; padding: 0.5rem 0; }
         nav ul { padding: 0; list-style: none; text-align: center; margin: 0; }
         nav ul li { display: inline-block; margin: 0 5px; }
         nav ul li a { text-decoration: none; color: #fff; padding: 10px 15px; display: inline-block; border-radius: 4px; transition: background-color 0.3s ease; }
-        nav ul li a:hover, nav ul li a.active { background-color: #555; } /* 활성 링크 스타일 추가 */
+        nav ul li a:hover, nav ul li a.active { background-color: #555; }
         main.container { flex-grow: 1; width: 90%; max-width: 1200px; margin: 20px auto; padding: 20px; background-color: #fff; box-shadow: 0 0 10px rgba(0,0,0,0.1); border-radius: 8px; }
-        footer { background: #333; color: #fff; text-align: center; padding: 1rem 0; margin-top: auto; width: 100%; }
-        /* --- 기본 레이아웃 끝 --- */
-
-        /* --- 드롭다운 메뉴 스타일 (style.css 로 이동 권장) --- */
+        footer { background: #333; color: #fff; text-align: center; padding: 1rem 0; margin-top: auto; width: 100%; font-size: 0.9em; }
         nav ul li.dropdown { position: relative; display: inline-block; }
         nav ul li.dropdown .dropbtn { cursor: default; }
-        nav ul li.dropdown .dropdown-content { display: none; position: absolute; background-color: #444; min-width: 120px; box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2); z-index: 1; left: 0; border-radius: 0 0 4px 4px; overflow: hidden; }
+        nav ul li.dropdown .dropdown-content { display: none; position: absolute; background-color: #444; min-width: 160px; box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2); z-index: 101; left: 0; border-radius: 0 0 4px 4px; overflow: hidden; }
         nav ul li.dropdown .dropdown-content a { color: white; padding: 10px 15px; text-decoration: none; display: block; text-align: left; white-space: nowrap; }
         nav ul li.dropdown .dropdown-content a:hover { background-color: #555; }
         nav ul li.dropdown:hover .dropdown-content { display: block; }
-        /* --- 드롭다운 메뉴 스타일 끝 --- */
-
-        /* --- 폼 및 테이블 스타일 (style.css 로 이동 권장) --- */
+        
         h2, h3 { color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 30px; margin-bottom: 20px; }
         h2:first-of-type { margin-top: 0; }
-        .form-section { margin-bottom: 30px; padding: 20px; background-color: #f9f9f9; border-radius: 5px; border: 1px solid #eee; } /* 섹션 구분 */
-        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px 20px; } /* 그리드 간격 조정 */
-        .form-group { margin-bottom: 0; }
-        .form-group label { display: block; margin-bottom: 8px; font-weight: bold; color: #555; font-size: 0.9rem;}
-        .form-group input[type="text"],
-        .form-group input[type="date"],
-        .form-group input[type="number"],
-        .form-group input[type="time"],
-        .form-group select,
-        .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 0.95rem; }
+
+        .form-section { margin-bottom: 20px; padding: 15px; background-color: #f9f9f9; border-radius: 5px; border: 1px solid #eee; }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px 20px; }
+        .form-group { margin-bottom: 0; display: flex; flex-direction: column; } /* 쩔 기록 스타일 적용 */
+        .form-group label { margin-bottom: 5px; font-weight: bold; color: #555; font-size: 0.9rem;} /* 쩔 기록 스타일 적용 */
+        .form-group input[type="text"], .form-group input[type="number"], .form-group select, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 0.95rem; }
         .form-group input:focus, .form-group textarea:focus, .form-group select:focus { border-color: #5cb85c; outline: none; box-shadow: 0 0 5px rgba(92, 184, 92, 0.5); }
-
-        /* 아이템 목록 스타일 */
-        .item-list-section { margin-top: 20px; }
-        .item-row { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; padding: 10px; background-color: #fdfdfd; border-radius: 4px; border: 1px solid #eee;}
-        .item-row label { margin-bottom: 0; font-size: 0.85rem; color: #666; min-width: 80px; text-align: right; } /* 라벨 너비 고정 및 오른쪽 정렬 */
-        .item-row input[type="text"], .item-row input[type="number"] { flex-grow: 1; padding: 8px; font-size: 0.9rem; }
-        .item-row .item-name { flex-basis: 40%; } /* 아이템명 너비 조절 */
-        .item-row .item-value { flex-basis: 25%; } /* 값 너비 조절 */
-        .item-row .item-qty { flex-basis: 15%; } /* 수량 너비 조절 */
-        .item-row button.remove-item-btn { background-color: #d9534f; color: white; border: none; padding: 5px 8px; font-size: 0.8rem; border-radius: 4px; cursor: pointer; transition: background-color 0.3s ease; line-height: 1; }
+        
+        .item-list-section { margin-top: 15px; }
+        .item-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 8px; padding: 8px; background-color: #fdfdfd; border-radius: 4px; border: 1px solid #eee;} /* 쩔 기록 스타일 적용 */
+        .item-row label { margin-bottom: 0; font-size: 0.85rem; color: #666; min-width: 70px; text-align: right; flex-shrink: 0; margin-right: 5px;} /* 쩔 기록 스타일 적용 */
+        .item-row input[type="text"], .item-row input[type="number"] { flex-grow: 1; padding: 8px; font-size: 0.9rem; min-width: 60px; max-width: 150px;} /* 쩔 기록 스타일 적용 */
+        .item-row .item-name { flex-basis: auto; flex-grow: 2; min-width: 120px;} /* 쩔 기록 스타일 적용 */
+        .item-row .item-value, .item-row .item-qty { flex-basis: auto; flex-grow: 1; } /* 쩔 기록 스타일 적용 */
+        .item-row button.remove-item-btn { background-color: #d9534f; color: white; border: none; padding: 5px 8px; font-size: 0.8rem; border-radius: 4px; cursor: pointer; transition: background-color 0.3s ease; line-height: 1; flex-shrink: 0; margin-left: auto;} /* 쩔 기록 스타일 적용 */
         .item-row button.remove-item-btn:hover { background-color: #c9302c; }
-        button.add-item-btn { background-color: #5bc0de; color: white; padding: 8px 12px; font-size: 0.9rem; border:none; border-radius: 4px; cursor:pointer; margin-top: 10px; transition: background-color 0.3s ease; }
+        
+        button.add-item-btn { background-color: #5bc0de; color: white; padding: 8px 12px; font-size: 0.9rem; border:none; border-radius: 4px; cursor:pointer; margin-top: 10px; margin-right:5px; transition: background-color 0.3s ease; }
         button.add-item-btn:hover { background-color: #31b0d5; }
-
+        .set-controls { margin-top: 10px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding-top: 5px; border-top: 1px dashed #eee; } /* 쩔 기록 스타일 적용 */
+        .set-controls label { font-size: 0.9em; margin-right: 0;} /* 쩔 기록 스타일 적용 */
+        .set-controls select { padding: 8px; font-size: 0.9rem; flex-grow: 1; min-width: 120px; max-width: 200px; border-radius: 4px; border: 1px solid #ccc;} /* 쩔 기록 스타일 적용 */
+        .set-controls button { font-size: 0.85rem; padding: 6px 10px; border-radius: 4px; cursor: pointer; transition: background-color 0.3s ease; } /* 쩔 기록 스타일 적용 */
+        
         .button-group { margin-top: 30px; text-align: right; padding-top: 20px; border-top: 1px solid #eee; }
-        button[type="submit"] { background-color: #5cb85c; }
-        button[type="submit"]:hover { background-color: #4cae4c; }
-        button.secondary { background-color: #f0ad4e; margin-left: 10px; }
+        button[type="submit"], button.action-button { background-color: #5cb85c; color:white; padding: 10px 15px; border:none; border-radius:4px; cursor:pointer; font-size:1rem; }
+        button[type="submit"]:hover, button.action-button:hover { background-color: #4cae4c; }
+        button.secondary { background-color: #f0ad4e; color:white; padding: 10px 15px; border:none; border-radius:4px; cursor:pointer; font-size:1rem; margin-left: 10px; }
         button.secondary:hover { background-color: #ec971f; }
-
-        .message-area { padding: 15px; margin-bottom: 20px; border-radius: 4px; border: 1px solid transparent; }
+        
+        .message-area { padding: 15px; margin-bottom: 20px; border-radius: 4px; border: 1px solid transparent; display: none; } /* 쩔 기록 스타일 적용 */
         .message-area.success { background-color: #dff0d8; color: #3c763d; border-color: #d6e9c6; }
         .message-area.error { background-color: #f2dede; color: #a94442; border-color: #ebccd1; }
         .message-area.info { background-color: #d9edf7; color: #31708f; border-color: #bce8f1; }
-        .message-area:empty { display: none; }
-
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        th, td { border: 1px solid #e0e0e0; padding: 10px 12px; text-align: left; vertical-align: middle; font-size: 0.9rem; }
-        th { background-color: #f8f8f8; font-weight: bold; color: #333; text-transform: uppercase; font-size: 0.85rem; }
+        
+        .table-controls { margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .table-container { overflow-x: auto; margin-top: 10px; }
+        .table-container table { min-width: 1800px; } /* 사냥 기록은 컬럼이 많으므로 유지 또는 약간 조정 */
+        table { width: 100%; border-collapse: collapse; margin-top: 0; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        th, td { border: 1px solid #e0e0e0; padding: 8px 10px; text-align: left; vertical-align: middle; font-size: 0.85rem; white-space: nowrap;} 
+        th { background-color: #f8f8f8; font-weight: bold; color: #333; font-size: 0.8rem; } 
         tbody tr:nth-child(even) { background-color: #fdfdfd; }
         tbody tr:hover { background-color: #f0f0f0; }
         td { color: #555; }
-        td:nth-child(n+5):nth-child(-n+10), /* 메소 관련 필드 */
-        td:nth-child(n+17) /* 수익 관련 필드 */
-         { text-align: right; }
-        td:nth-child(11), td:nth-child(12) /* 경험치 필드 */
-         { text-align: right; }
+        td.number-cell { text-align: right; } 
+        td.action-cell { text-align: center; white-space: nowrap; }
+        td.action-cell button { font-size: 0.8em; padding: 3px 6px; margin: 0 2px; border-radius: 3px; cursor: pointer;}
 
-        /* 반응형 테이블 스크롤 */
-        .table-container {
-            overflow-x: auto; /* 가로 스크롤 생성 */
-            margin-top: 20px;
-        }
-        .table-container table {
-            min-width: 1200px; /* 테이블 최소 너비 설정 (필요시 조정) */
-        }
-        /* --- 폼 및 테이블 스타일 끝 --- */
+        .column-toggle-popup { display: none; position: absolute; background-color: white; border: 1px solid #ccc; box-shadow: 0 2px 10px rgba(0,0,0,0.1); padding: 15px; z-index: 1050; max-height: 300px; overflow-y: auto; text-align: left; border-radius: 4px;}  /* 쩔 기록 스타일 적용 (z-index, border-radius 등) */
+        .column-toggle-popup label { display: block; margin-bottom: 8px; font-size: 0.9em; user-select: none; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;} /* 쩔 기록 스타일 적용 */
+        .column-toggle-popup input[type="checkbox"] { margin-right: 8px; vertical-align: middle; } /* 쩔 기록 스타일 적용 */
+        .column-toggle-popup button { display:block; width:100%; margin-top:10px; padding: 8px; font-size:0.9em; background-color: #6c757d; color: white; border: none; border-radius: 3px; cursor: pointer;} /* 쩔 기록 스타일 적용 */
+        .column-toggle-popup button:hover { background-color: #5a6268; }
+        
+        .form-stage { display: none; animation: fadeIn 0.3s; } /* 쩔 기록 스타일 적용 */
+        .form-stage.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .flatpickr-calendar { z-index: 1050 !important; } /* 쩔 기록 스타일 적용 (z-index값 확인) */
     </style>
 </head>
 <body>
     <header>
-        <h1>메이플스토리 수익 기록 웹</h1>
+        <h1>메랜통계</h1>
     </header>
+    <nav>
+        <ul>
+            <li><a href="{{ url_for('home') }}" class="{{ 'active' if request.url.path == url_for('home') else '' }}">홈</a></li>
+            <li><a href="{{ url_for('list_and_add_hunting_sessions') }}" class="{{ 'active' if 'hunting-sessions' in request.url.path else '' }}">사냥</a></li>
+            <li><a href="{{ url_for('list_and_add_jjul_sessions') }}" class="{{ 'active' if 'jjul-sessions' in request.url.path else '' }}">쩔</a></li>
+            
+            <li class="dropdown">
+                <a href="javascript:void(0)" class="dropbtn {{ 'active' if request.url.path.startswith((url_for('statistics_experience_daily')|string).rsplit('/', 1)[0]) else '' }}">경험치 통계</a>
+                <div class="dropdown-content">
+                    <a href="{{ url_for('statistics_experience_daily') }}" class="{{ 'active' if request.url.path == url_for('statistics_experience_daily') else '' }}">일별 경험치</a>
+                    <a href="{{ url_for('statistics_experience_weekday') }}" class="{{ 'active' if request.url.path == url_for('statistics_experience_weekday') else '' }}">요일별 경험치</a>
+                    <a href="{{ url_for('statistics_experience_map') }}" class="{{ 'active' if request.url.path == url_for('statistics_experience_map') else '' }}">맵별 경험치</a>
+                    </div>
+            </li>
 
-    <!-- 네비게이션 바 - 순서 및 이름 변경 -->
-<nav>
-    <ul>
-        <!-- 1. 홈 -->
-        <li><a href="{{ url_for('home') }}">홈</a></li>
-
-        <!-- 2. 사냥 -->
-        <li><a href="{{ url_for('list_and_add_hunting_sessions') }}" class="active">사냥</a></li> <!-- 현재 페이지 active 표시 -->
-
-        <!-- 3. 쩔 -->
-        <li><a href="{{ url_for('list_and_add_jjul_sessions') }}">쩔</a></li>
-
-        <!-- 4. 경험치 통계 (신규 추가) -->
-        <li><a href="{{ url_for('statistics_experience') }}">경험치 통계</a></li>
-
-        <!-- 5. 통계 (드롭다운) -->
-        <li class="dropdown">
-            <a href="javascript:void(0)" class="dropbtn">통계</a>
-            <div class="dropdown-content">
-                <a href="{{url_for('statistics_daily') }}">일별 요약</a>
-                <a href="{{ url_for('statistics_map') }}">맵별 요약</a>
-                <a href="{{ url_for('statistics_weekday') }}">요일별 요약</a>
-            </div>
-        </li>
-
-        <!-- 6. 메소 판매 기록 (이름 변경) -->
-        <li><a href="{{ url_for('list_and_add_meso_sales') }}">메소 판매 기록</a></li>
-    </ul>
-</nav>
-    <!-- 네비게이션 바 끝 -->
-
+            <li class="dropdown">
+                <a href="javascript:void(0)" class="dropbtn {{ 'active' if request.url.path.startswith((url_for('statistics_daily')|string).rsplit('/', 1)[0]) and not request.url.path.startswith((url_for('statistics_experience_daily')|string).rsplit('/', 1)[0]) else '' }}">메소 통계</a>
+                <div class="dropdown-content">
+                    <a href="{{ url_for('statistics_daily') }}" class="{{ 'active' if request.url.path == url_for('statistics_daily') else '' }}">일별 메소</a>
+                    <a href="{{ url_for('statistics_weekday') }}" class="{{ 'active' if request.url.path == url_for('statistics_weekday') else '' }}">요일별 메소</a>
+                    <a href="{{ url_for('statistics_map') }}" class="{{ 'active' if request.url.path == url_for('statistics_map') else '' }}">맵별 메소</a>
+                </div>
+            </li>
+            <li><a href="{{ url_for('list_and_add_meso_sales') }}" class="{{ 'active' if 'meso-sales' in request.url.path else '' }}">쌀먹 장부</a></li>
+            <li><a href="{{ url_for('info_page') }}" class="active">정보</a></li>
+        </ul>
+    </nav>
     <main class="container">
         <h2>사냥 기록</h2>
-        <div id="message-area-hunting" class="message-area"></div> <!-- 메시지 영역 ID 확인 -->
+        <div id="message-area-hunting" class="message-area"></div>
+                
+        <button type="button" id="loadPreviousHuntingDataBtn" class="action-button" style="margin-bottom:15px; background-color: #6c757d;">이전 기록 불러오기</button>    [이전 기록에 입력하신 종료 데이터가 시작 데이터로 자동 입력됩니다.]</span></label>
+        
         <form id="huntingForm">
-            <!-- 사냥 기본 정보 -->
-            <div class="form-section">
-                <h3>사냥 정보</h3>
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label for="session_date">날짜:</label>
-                        <input type="date" id="session_date" name="session_date" required>
+            <div id="formStage1Hunting" class="form-stage active">
+                <div class="form-section">
+                    <h3>사냥 준비 정보</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="session_date_flatpickr_hunting">날짜:</label>
+                            <input type="text" id="session_date_flatpickr_hunting" name="session_date" required placeholder="날짜를 선택하세요...">
+                        </div>
+                        <div class="form-group">
+                            <label for="map_name_hunting">맵 이름:</label>
+                            <input type="text" id="map_name_hunting" name="map_name" placeholder="예: 불어전" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="start_time_hunting">시작 시간 (선택):</label>
+                            <input type="text" id="start_time_hunting" name="start_time" placeholder="예: 0930 또는 14시">
+                        </div>
+                        <div class="form-group">
+                            <label for="entry_fee_hunting">지참비 (선택):</label>
+                            <input type="number" id="entry_fee_hunting" name="entry_fee" value="0" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="start_meso_hunting">시작 메소 (지참비 사용 후):</label>
+                            <input type="number" id="start_meso_hunting" name="start_meso" value="0" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="start_level_hunting">시작 레벨:</label>
+                            <input type="number" id="start_level_hunting" name="start_level" value="0" min="1" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="start_exp_percentage_hunting">시작 경험치 % <span style="font-size:0.8em; color:#666; font-weight:normal;">(입력 시 실제 경험치량 계산)</span></label>
+                            <input type="number" id="start_exp_percentage_hunting" name="start_exp_percentage" value="0.00" step="0.01" min="0" max="100" required>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label for="map_name">맵 이름:</label>
-                        <input type="text" id="map_name" name="map_name" placeholder="예: 불타는 검은구슬의 제단 3" required>
+                </div>
+                <div class="form-section item-list-section">
+                    <h3>시작 시 소모 아이템 (선택 입력)</h3>
+                    <div id="initialConsumableItemsContainerHunting"></div>
+                    <button type="button" onclick="addHuntingItemRow('initial_consumable')" class="add-item-btn">시작 소모품 추가 (+)</button>
+                    <div class="set-controls">
+                        <label for="initialConsumableItemSetSelectHunting" style="min-width:fit-content; margin-right:5px;">세트:</label>
+                        <select id="initialConsumableItemSetSelectHunting"></select>
+                        <button type="button" onclick="loadHuntingItemSet('initial_consumable')" class="secondary">불러오기</button>
+                        <button type="button" onclick="saveHuntingItemSet('initial_consumable')" class="secondary">현재 목록 세트 저장</button>
+                        <button type="button" onclick="deleteHuntingItemSet('initial_consumable')" class="remove-item-btn" style="margin-left:auto;">선택 세트 삭제</button>
                     </div>
-                    <div class="form-group">
-                        <label for="start_time">시작 시간:</label>
-                        <input type="time" id="start_time" name="start_time" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="end_time">종료 시간:</label>
-                        <input type="time" id="end_time" name="end_time" required>
-                    </div>
+                </div>
+                <div class="button-group" style="text-align:center;">
+                    <button type="button" id="startHuntingBtn" class="action-button">사냥 시작</button>
                 </div>
             </div>
 
-            <!-- 메소 및 경험치 정보 -->
-            <div class="form-section">
-                <h3>메소 & 경험치</h3>
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label for="start_meso">시작 메소:</label>
-                        <input type="number" id="start_meso" name="start_meso" value="0" required>
+            <div id="formStage2Hunting" class="form-stage">
+                <div class="form-section">
+                    <h3>사냥 결과 정보</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="end_time_hunting">종료 시간:</label>
+                            <input type="text" id="end_time_hunting" name="end_time" required placeholder="예: 1700 또는 오후 5:30">
+                        </div>
+                        <div class="form-group">
+                            <label for="end_meso_hunting">종료 메소 (잡템 판매 전):</label>
+                            <input type="number" id="end_meso_hunting" name="end_meso" value="0" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="sold_meso_hunting">(잡템)판매 후 메소:</label>
+                            <input type="number" id="sold_meso_hunting" name="sold_meso" value="0" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="end_level_hunting">종료 레벨 (선택):</label>
+                            <input type="number" id="end_level_hunting" name="end_level" value="" min="0" placeholder="시작 레벨과 동일하면 비워도 됨">
+                        </div>
+                        <div class="form-group">
+                            <label for="end_exp_percentage_hunting">종료 경험치 % (선택):</label>
+                            <input type="number" id="end_exp_percentage_hunting" name="end_exp_percentage" value="" step="0.01" min="0" max="100" placeholder="경험치 변화 없으면 비워도 됨">
+                        </div>
+                        <div class="form-group">
+                            <label for="coupon_15min_count_hunting">15분 경쿠 사용 횟수:</label>
+                            <input type="number" id="coupon_15min_count_hunting" name="coupon_15min_count" value="0" min="0">
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label for="end_meso">종료 메소:</label>
-                        <input type="number" id="end_meso" name="end_meso" value="0" required>
+                </div>
+
+                <div class="form-section item-list-section">
+                    <h3>획득한 고가 아이템</h3>
+                    <div id="rareItemsContainerHunting"></div>
+                    <button type="button" onclick="addHuntingItemRow('rare')" class="add-item-btn">고가 아이템 추가 (+)</button>
+                    <div class="set-controls">
+                        <label for="rareItemSetSelectHunting" style="min-width:fit-content; margin-right:5px;">세트:</label>
+                        <select id="rareItemSetSelectHunting"></select>
+                        <button type="button" onclick="loadHuntingItemSet('rare')" class="secondary">불러오기</button>
+                        <button type="button" onclick="saveHuntingItemSet('rare')" class="secondary">현재 목록 세트 저장</button>
+                        <button type="button" onclick="deleteHuntingItemSet('rare')" class="remove-item-btn" style="margin-left:auto;">선택 세트 삭제</button>
                     </div>
-                    <div class="form-group">
-                        <label for="sold_meso">(잡템)판매 후 메소:</label>
-                        <input type="number" id="sold_meso" name="sold_meso" value="0" required>
-                    </div>
-                     <div class="form-group">
-                        <label for="entry_fee">지참비 (선택):</label>
-                        <input type="number" id="entry_fee" name="entry_fee" value="0">
-                    </div>
-                    <div class="form-group">
-                        <label for="start_level">시작 레벨:</label>
-                        <input type="number" id="start_level" name="start_level" value="0" min="0" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="start_exp_percentage">시작 경험치 % (소수점 2자리까지):</label>
-                        <input type="number" id="start_exp_percentage" name="start_exp_percentage" value="0.00" step="0.01" min="0" max="100" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="end_level">종료 레벨 (선택):</label>
-                        <input type="number" id="end_level" name="end_level" value="" min="0" placeholder="시작 레벨과 동일하면 비워도 됨">
-                    </div>
-                    <div class="form-group">
-                        <label for="end_exp_percentage">종료 경험치 % (소수점 2자리까지, 선택):</label>
-                        <input type="number" id="end_exp_percentage" name="end_exp_percentage" value="" step="0.01" min="0" max="100" placeholder="경험치 변화 없으면 비워도 됨">
-                    </div>
+                </div>
+
+                <div class="form-section item-list-section">
+                <h3>사냥 중 소모/획득 아이템 최종 정산</h3> <p style="font-size:0.8em; color: #666;">
+                    (1단계에서 입력한 '시작 시 소모 아이템'이 여기에 표시됩니다. 해당 아이템의 최종 '종료 수량'과 '개당 가격/가치'를 입력해주세요. 그 외 사냥 중 변동된 다른 아이템도 추가할 수 있습니다.)
+                </p>
+                <div id="consumableItemsContainerHunting"></div> <button type="button" onclick="addHuntingItemRow('consumable_stage2_new')" class="add-item-btn">새 소모/획득 아이템 추가 (+)</button> <div class="set-controls">
+                    <label for="consumableItemSetSelectHunting" style="min-width:fit-content; margin-right:5px;">세트:</label>
+                    <select id="consumableItemSetSelectHunting"></select>
+                    <button type="button" onclick="loadHuntingItemSet('consumable')" class="secondary">불러오기</button>
+                    <button type="button" onclick="saveHuntingItemSet('consumable')" class="secondary">현재 목록 세트 저장</button>
+                    <button type="button" onclick="deleteHuntingItemSet('consumable')" class="remove-item-btn" style="margin-left:auto;">선택 세트 삭제</button>
                 </div>
             </div>
 
-            <!-- 고가 아이템 -->
-            <div class="form-section item-list-section">
-                <h3>획득한 고가 아이템</h3>
-                <div id="rareItemsContainer">
-                    <!-- 고가 아이템 행이 여기에 추가됩니다 -->
+                <div class="button-group">
+                    <button type="submit">기록 추가 및 계산</button>
+                    <button type="button" onclick="resetHuntingForm(true)" class="secondary">양식 초기화</button> 
                 </div>
-                <button type="button" onclick="addRareItemRow()" class="add-item-btn">고가 아이템 추가 (+)</button>
-            </div>
-
-            <!-- 소모/획득 아이템 -->
-            <div class="form-section item-list-section">
-                <h3>소모/획득 아이템</h3>
-                <div id="consumableItemsContainer">
-                    <!-- 소모/획득 아이템 행이 여기에 추가됩니다 -->
-                </div>
-                <button type="button" onclick="addConsumableRow()" class="add-item-btn">소모/획득 아이템 추가 (+)</button>
-            </div>
-
-            <div class="button-group">
-                <button type="submit">기록 추가 및 계산</button>
-                <button type="button" onclick="resetHuntingForm()" class="secondary">양식 초기화</button>
             </div>
         </form>
 
-        <!-- 사냥 기록 목록 테이블 -->
-        <h3>사냥 목록</h3>
-         <div class="table-container">
-             <table id="huntingSessionsTable">
+        <h3>
+            사냥 목록
+            <div class="table-controls">
+                 <button type="button" id="toggleHuntingColumnsBtn" class="action-button" style="font-size:0.8em; padding:5px 10px;">컬럼 표시 설정</button>
+                 <button type="button" id="deleteAllHuntingSessionsBtn" class="action-button" style="font-size:0.8em; padding:5px 10px; background-color: #d9534f;">모든 기록 삭제</button>
+            </div>
+        </h3>
+        <div id="huntingColumnTogglePopup" class="column-toggle-popup"></div>
+        
+        <div class="table-container">
+            <table id="huntingSessionsTable">
                 <thead>
-                    <tr>
-                        <th>날짜</th>
-                        <th>맵명</th>
-                        <th>시작시간</th>
-                        <th>종료시간</th>
-                        <th>시작메소</th>
-                        <th>종료메소</th>
-                        <th>판매후메소</th>
-                        <th>지참비</th>
-                        <th>경쿠(15분)</th>
-                        <th>시작경험치</th>
-                        <th>종료경험치</th>
-                        <th>사냥메소수익</th>
-                        <th>일반템수익</th>
-                        <th>고가템가치</th>
-                        <th>소모아이템비</th>
-                        <th>소모템획득수익</th>
-                        <th>총수익</th>
-                        <th>순수익</th>
-                        <th>경험치수익</th>
-                        <th>원경험치</th>
-                        <th>기록 시간</th>
-                        <!-- <th>작업</th> -->
-                    </tr>
                 </thead>
                 <tbody>
-                    <tr>
-                        <td colspan="21" style="text-align:center;">목록을 불러오는 중...</td>
-                    </tr>
                 </tbody>
             </table>
-         </div>
+           </div>
     </main>
 
     <footer>
-        <p>© 2025 의문의돌맹이. All rights reserved.</p>
+        <p>© 2025 김하늘 (의문의돌맹이). All rights reserved.</p>
     </footer>
 
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://npmcdn.com/flatpickr/dist/l10n/ko.js"></script>
+
     <script>
+        // 전역 변수 및 DOM 요소 참조
         const huntingForm = document.getElementById('huntingForm');
-        const messageArea = document.getElementById('message-area-hunting'); // ID 일치시킴
-        const rareItemsContainer = document.getElementById('rareItemsContainer');
-        const consumableItemsContainer = document.getElementById('consumableItemsContainer');
+        const messageAreaHunting = document.getElementById('message-area-hunting'); 
+        const rareItemsContainerHunting = document.getElementById('rareItemsContainerHunting');
+        const consumableItemsContainerHunting = document.getElementById('consumableItemsContainerHunting'); 
+        const initialConsumableItemsContainerHunting = document.getElementById('initialConsumableItemsContainerHunting');
         const huntingTableBody = document.getElementById('huntingSessionsTable').getElementsByTagName('tbody')[0];
+        const huntingTableHead = document.getElementById('huntingSessionsTable').getElementsByTagName('thead')[0];
+        const huntingColumnTogglePopup = document.getElementById('huntingColumnTogglePopup'); // 팝업 DOM 참조 추가
+        
+        let sessionDateFlatpickrInstanceHunting = null;
+        const startTimeInputHunting = document.getElementById('start_time_hunting');
+        const endTimeInputHunting = document.getElementById('end_time_hunting');
 
+        const formStage1Hunting = document.getElementById('formStage1Hunting');
+        const formStage2Hunting = document.getElementById('formStage2Hunting');
+        const startHuntingBtn = document.getElementById('startHuntingBtn');
+        const finalSubmitButtonHunting = huntingForm.querySelector('button[type="submit"]');
+        const loadPreviousHuntingDataBtn = document.getElementById('loadPreviousHuntingDataBtn');
+
+        let tempInitialConsumablesHunting = []; 
+        let currentHuntingSessionsData = []; // 목록 데이터 저장용
+
+        const LS_HUNTING_COL_VISIBILITY_KEY = 'huntingTableColumnVisibility_v3';
+        const LS_ITEM_SETS_HUNTING_KEY_PREFIX = 'huntingItemSets_v1_';
+
+        const huntingTableColumns = [
+            { key: 'session_date', header: '날짜', defaultVisible: true, type: 'string' },
+            { key: 'map_name', header: '맵명', defaultVisible: true, type: 'string' },
+            { key: 'start_time', header: '시작', defaultVisible: true, type: 'string' },
+            { key: 'end_time', header: '종료', defaultVisible: true, type: 'string' },
+            { key: 'duration_minutes', header: '시간(분)', defaultVisible: true, type: 'number', class: 'number-cell' },
+            { key: 'entry_fee', header: '지참비', defaultVisible: false, type: 'number', class: 'number-cell' },
+            { key: 'coupon_15min_count', header: '경쿠', defaultVisible: true, type: 'number', class: 'number-cell' },
+            { key: 'start_level_display', header: '시작Lv(%)', defaultVisible: true, type: 'string', class: 'number-cell' },
+            { key: 'end_level_display', header: '종료Lv(%)', defaultVisible: true, type: 'string', class: 'number-cell' },
+            { key: 'gained_exp', header: '획득EXP', defaultVisible: true, type: 'number', class: 'number-cell' },
+            { key: 'base_experience_profit', header: '원경험치', defaultVisible: true, type: 'number', class: 'number-cell' },
+            { key: 'hunting_meso_profit', header: '사냥메소', defaultVisible: true, type: 'number', class: 'number-cell' },
+            { key: 'normal_item_profit', header: '일반템', defaultVisible: true, type: 'number', class: 'number-cell' },
+            { key: 'total_rare_item_value', header: '고가템', defaultVisible: true, type: 'number', class: 'number-cell' },
+            { key: 'total_consumable_gained_profit', header: '소모품획득', defaultVisible: true, type: 'number', class: 'number-cell' },
+            { key: 'total_consumable_cost', header: '소모품비용', defaultVisible: true, type: 'number', class: 'number-cell' },
+            { key: 'total_profit', header: '총수익', defaultVisible: true, type: 'number', class: 'number-cell' },
+            { key: 'net_profit', header: '순수익', defaultVisible: true, type: 'number', class: 'number-cell' },
+            { key: 'start_meso', header: '시작메소(DB)', defaultVisible: false, type: 'number', class: 'number-cell' }, 
+            { key: 'end_meso', header: '종료메소(DB)', defaultVisible: false, type: 'number', class: 'number-cell' },
+            { key: 'sold_meso', header: '판매후메소(DB)', defaultVisible: false, type: 'number', class: 'number-cell' },
+            { key: 'created_at_display', header: '기록시간', defaultVisible: false, type: 'string' },
+            { key: 'actions', header: '작업', defaultVisible: true, type: 'action', class: 'action-cell', noToggle: true }
+        ];
+        let huntingColumnVisibility = {};
+
+        // --- 페이지 로드 시 실행 ---
         document.addEventListener('DOMContentLoaded', function() {
-            document.getElementById('session_date').value = new Date().toISOString().split('T')[0];
-            loadHuntingSessions();
-        });
-
-        function addRareItemRow() {
-            const index = rareItemsContainer.children.length;
-            const div = document.createElement('div');
-            div.classList.add('item-row');
-            div.innerHTML = `
-                <label for="rare_item_name_${index}">아이템명:</label>
-                <input type="text" id="rare_item_name_${index}" name="rare_items[${index}][item_name]" placeholder="아이템 이름" class="item-name">
-                <label for="rare_item_value_${index}">예상 가치:</label>
-                <input type="number" id="rare_item_value_${index}" name="rare_items[${index}][item_value]" value="0" min="0" class="item-value">
-                <button type="button" onclick="this.closest('.item-row').remove()" class="remove-item-btn">X</button>
-            `;
-            rareItemsContainer.appendChild(div);
-        }
-
-        function addConsumableRow() {
-            const index = consumableItemsContainer.children.length;
-            const div = document.createElement('div');
-            div.classList.add('item-row');
-            div.innerHTML = `
-                <label for="cons_item_name_${index}">명칭:</label>
-                <input type="text" id="cons_item_name_${index}" name="consumable_items[${index}][item_name]" placeholder="아이템 이름" class="item-name">
-                <label for="cons_item_price_${index}">개당 가격/가치:</label>
-                <input type="number" id="cons_item_price_${index}" name="consumable_items[${index}][price_or_value_per_item]" value="0" min="0" class="item-value">
-                <label for="cons_start_qty_${index}">시작:</label>
-                <input type="number" id="cons_start_qty_${index}" name="consumable_items[${index}][start_quantity]" value="0" min="0" class="item-qty">
-                <label for="cons_end_qty_${index}">종료:</label>
-                <input type="number" id="cons_end_qty_${index}" name="consumable_items[${index}][end_quantity]" value="0" min="0" class="item-qty">
-                <button type="button" onclick="this.closest('.item-row').remove()" class="remove-item-btn">X</button>
-            `;
-            consumableItemsContainer.appendChild(div);
-        }
-
-        huntingForm.addEventListener('submit', async function(event) {
-            event.preventDefault();
-            showMessage('', 'info'); // 이전 메시지 초기화, info로 시작
-
-            const formData = new FormData(huntingForm);
-            const data = {};
-
-            for (let [key, value] of formData.entries()) {
-                if (!key.startsWith('rare_items[') && !key.startsWith('consumable_items[')) {
-                    // 숫자 필드 목록에 'start_level' 추가, 'start_exp_percentage'는 별도 처리
-                    if (['start_meso', 'end_meso', 'sold_meso', 'entry_fee', 'coupon_15min_count', 'start_level'].includes(key)) {
-                        data[key] = parseInt(value) || 0;
-                    } else if (key === 'end_level') { // end_level은 비어있을 수 있음
-                        data[key] = value === '' ? null : (parseInt(value) || 0);
-                        if (data[key] === 0 && value !== '0') data[key] = null; 
-                    } else if (['start_exp_percentage', 'end_exp_percentage'].includes(key)) {
-                        data[key] = value === '' ? null : (parseFloat(value) || 0.0);
-                         if (key === 'end_exp_percentage' && data[key] === 0.0 && value !== '0.00' && value !== '0') data[key] = null;
-                    }
-                    // 🚨 기존 start_experience, end_experience는 HTML에서 제거되었으므로 자동으로 처리 안됨 🚨
-                    else {
-                        data[key] = value;
-                    }
-                }
+            const dateInput = document.getElementById('session_date_flatpickr_hunting');
+            if (dateInput) {
+                sessionDateFlatpickrInstanceHunting = flatpickr(dateInput, {
+                    dateFormat: "Y-m-d", defaultDate: "today", locale: "ko"
+                });
+            }
+            if (startTimeInputHunting) {
+                startTimeInputHunting.addEventListener('blur', formatTimeInput);
+                startTimeInputHunting.addEventListener('keydown', function(event) { if (event.key === 'Enter') { formatTimeInput(event); event.preventDefault(); } });
+            }
+            if (endTimeInputHunting) {
+                endTimeInputHunting.addEventListener('blur', formatTimeInput);
+                endTimeInputHunting.addEventListener('keydown', function(event) { if (event.key === 'Enter') { formatTimeInput(event); event.preventDefault(); } });
             }
 
-            data.rare_items = [];
-            const rareItemRows = rareItemsContainer.querySelectorAll('.item-row');
-            rareItemRows.forEach((row, index) => {
-                const nameInput = row.querySelector(`input[name="rare_items[${index}][item_name]"]`);
-                const valueInput = row.querySelector(`input[name="rare_items[${index}][item_value]"]`);
-                if (nameInput && valueInput) { // defensive coding
-                    const name = nameInput.value.trim();
-                    const value = parseInt(valueInput.value) || 0;
-                    if (name) { // 이름만 있어도 일단 추가 (가치는 0일 수 있음)
-                        data.rare_items.push({ item_name: name, item_value: value });
+            if (formStage1Hunting && formStage2Hunting && startHuntingBtn && finalSubmitButtonHunting && loadPreviousHuntingDataBtn) {
+                formStage1Hunting.classList.add('active'); 
+                formStage1Hunting.style.display = 'block'; 
+                formStage2Hunting.style.display = 'none';  
+                finalSubmitButtonHunting.style.display = 'none';
+
+                startHuntingBtn.addEventListener('click', function() {
+                    let stage1Valid = true;
+                    const stage1FieldsToValidate = [
+                        {id: 'session_date_flatpickr_hunting', name: '날짜'}, 
+                        {id: 'map_name_hunting', name: '맵 이름'},
+                        {id: 'start_meso_hunting', name: '시작 메소'}, 
+                        {id: 'start_level_hunting', name: '시작 레벨'},
+                        {id: 'start_exp_percentage_hunting', name: '시작 경험치 %'}
+                    ];
+                    for(const field of stage1FieldsToValidate) {
+                        const el = document.getElementById(field.id);
+                        if (el && el.value.trim() === "" && 
+                            !( (field.id === 'start_level_hunting' || field.id === 'start_meso_hunting' || field.id === 'entry_fee_hunting' ) && el.value === "0") && 
+                            !(field.id === 'start_exp_percentage_hunting' && (el.value === "0.00" || el.value === "0" )) 
+                           ) {
+                            showMessageHunting(`${field.name} 필드를 입력해주세요.`, 'error', 3000); stage1Valid = false; el.focus(); return;
+                        }
                     }
-                }
-            });
+                    
+                    let hasEmptyRequiredFields = false;
+                    for(const field of stage1FieldsToValidate) {
+                        const el = document.getElementById(field.id);
+                        if(el && el.value.trim() === "" && 
+                           field.id !== 'start_level_hunting' && 
+                           field.id !== 'start_meso_hunting' && 
+                           field.id !== 'start_exp_percentage_hunting' &&
+                           field.id !== 'entry_fee_hunting' // entry_fee는 필수가 아니며 기본값 0
+                        ) {
+                            hasEmptyRequiredFields = true; break;
+                        }
+                    }
 
-            data.consumable_items = [];
-            const consumableItemRows = consumableItemsContainer.querySelectorAll('.item-row');
-            consumableItemRows.forEach((row, index) => {
-                const nameInput = row.querySelector(`input[name="consumable_items[${index}][item_name]"]`);
-                const priceInput = row.querySelector(`input[name="consumable_items[${index}][price_or_value_per_item]"]`);
-                const startQtyInput = row.querySelector(`input[name="consumable_items[${index}][start_quantity]"]`);
-                const endQtyInput = row.querySelector(`input[name="consumable_items[${index}][end_quantity]"]`);
+                    if (hasEmptyRequiredFields) {
+                        if (!confirm("일부 필수 항목이 비어있습니다. 그래도 사냥을 시작하시겠습니까?")) return;
+                    }
 
-                if (nameInput && priceInput && startQtyInput && endQtyInput) { // defensive coding
-                    const name = nameInput.value.trim();
-                    const price = parseInt(priceInput.value) || 0;
-                    const startQty = parseInt(startQtyInput.value) || 0;
-                    const endQty = parseInt(endQtyInput.value) || 0;
-                    if (name) { // 이름이 있을 때만 추가
-                        data.consumable_items.push({
-                            item_name: name,
-                            price_or_value_per_item: price,
-                            start_quantity: startQty,
-                            end_quantity: endQty
+
+                    if (!startTimeInputHunting.value.trim() && sessionDateFlatpickrInstanceHunting) { 
+                        const now = new Date();
+                        startTimeInputHunting.value = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+                        formatTimeInput({target: startTimeInputHunting}); 
+                    }
+                    
+                    tempInitialConsumablesHunting = []; 
+                    if (initialConsumableItemsContainerHunting) {
+                        initialConsumableItemsContainerHunting.querySelectorAll('.item-row').forEach(row => {
+                            const nameInput = row.querySelector('input[name*="[item_name]"]'); 
+                            const startQtyInput = row.querySelector('input[name*="[start_quantity]"]');
+                            if (nameInput && nameInput.value.trim() && startQtyInput) {
+                                tempInitialConsumablesHunting.push({
+                                    item_name: nameInput.value.trim(),
+                                    start_quantity: parseInt(startQtyInput.value) || 0,
+                                    // 쩔 기록 페이지와 통일성을 위해 기본값 추가 (실제 사용은 2단계에서)
+                                    price_or_value_per_item: 0, 
+                                    end_quantity: 0 
+                                });
+                            }
                         });
                     }
-                }
-            });
-            
-            // 사용자 입력값을 서버 스키마에 맞게 변환
-            // 예: session_date, start_time, end_time을 datetime 문자열로 조합
-            // 서버의 HuntingSessionCreate 스키마가 datetime을 기대한다면 여기서 변환 필요
-            // 현재는 문자열 그대로 보내고 서버에서 처리한다고 가정.
-            // 만약 서버가 start_time, end_time을 datetime으로 기대한다면 아래와 같이 조합
-            // data.start_time = data.session_date + 'T' + data.start_time + ':00';
-            // data.end_time = data.session_date + 'T' + data.end_time + ':00';
-
-
-            try {
-                showMessage('기록 추가 및 계산 중...', 'info');
-                const response = await fetch('/api/hunting-times/', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data),
-                });
-
-                // === 수정된 오류 처리 부분 ===
-                if (!response.ok) {
-                    const responseText = await response.text(); // 서버 응답을 텍스트로 먼저 받음
-                    console.error('Server raw response:', responseText); // 원시 응답 로깅
-
-                    let errorDetail = `HTTP error! status: ${response.status}`;
-                    try {
-                        const errorJson = JSON.parse(responseText); // JSON 파싱 시도
-                        if (errorJson.detail) {
-                            if (Array.isArray(errorJson.detail)) {
-                                errorDetail = errorJson.detail.map(err => {
-                                    let field = err.loc && err.loc.length > 1 ? err.loc[1] : '입력값';
-                                    return `${field}: ${err.msg}`;
-                                }).join('; ');
-                            } else if (typeof errorJson.detail === 'string') {
-                                errorDetail = errorJson.detail;
-                            } else {
-                                errorDetail = JSON.stringify(errorJson.detail);
-                            }
-                        } else {
-                             errorDetail = responseText; // JSON 파싱 성공했으나 detail 필드가 없는 경우
-                        }
-                    } catch (e) {
-                        // JSON 파싱 실패 시, responseText (원문) 사용
-                        errorDetail = responseText || `An unknown error occurred. Status: ${response.status}`;
+                    
+                    if (consumableItemsContainerHunting) {
+                        consumableItemsContainerHunting.innerHTML = ''; 
+                        tempInitialConsumablesHunting.forEach(itemData => {
+                            addHuntingItemRow('consumable_stage2_prefill', itemData); 
+                        });
                     }
-                    throw new Error(errorDetail);
-                }
-                // === 수정된 오류 처리 부분 끝 ===
-
-                const result = await response.json();
-                showMessage('사냥 기록이 성공적으로 추가되었습니다.', 'success');
-                // resetHuntingForm(); // 폼 초기화 주석 처리 (사용자 피드백 반영 가능성)
-                loadHuntingSessions(); // 목록 새로고침
-
-            } catch (error) {
-                showMessage(`오류: ${error.message}`, 'error');
-                console.error('Error adding hunting session (processed):', error.message);
-                console.error('Full error object:', error);
+                    
+                    formStage1Hunting.style.display = 'none'; formStage1Hunting.classList.remove('active');
+                    formStage2Hunting.style.display = 'block'; formStage2Hunting.classList.add('active');
+                    finalSubmitButtonHunting.style.display = 'inline-block';
+                    startHuntingBtn.style.display = 'none'; 
+                    if(loadPreviousHuntingDataBtn) loadPreviousHuntingDataBtn.style.display = 'none'; 
+                });
             }
+
+            const loadPrevBtn = document.getElementById('loadPreviousHuntingDataBtn');
+            if (loadPrevBtn) loadPrevBtn.addEventListener('click', loadPreviousHuntingData);
+            
+            const toggleBtn = document.getElementById('toggleHuntingColumnsBtn');
+            if(toggleBtn) toggleBtn.addEventListener('click', toggleColumnPopupHunting);
+            
+            const deleteAllBtn = document.getElementById('deleteAllHuntingSessionsBtn');
+            if(deleteAllBtn) deleteAllBtn.addEventListener('click', deleteAllHuntingSessions);
+
+            huntingColumnVisibility = loadColumnVisibility(LS_HUNTING_COL_VISIBILITY_KEY, huntingTableColumns);
+            renderHuntingTableHeaders();
+            setupColumnTogglePopup(LS_HUNTING_COL_VISIBILITY_KEY, huntingTableColumns, huntingColumnVisibility, 'huntingColumnTogglePopup', renderHuntingTableHeaders, renderHuntingTableBody); // 마지막 인자 변경
+            
+            loadHuntingSessions();
+            loadItemSetOptionsHunting('initial_consumable');
+            loadItemSetOptionsHunting('rare');
+            loadItemSetOptionsHunting('consumable');
         });
 
-        async function loadHuntingSessions() {
-            huntingTableBody.innerHTML = '<tr><td colspan="21" style="text-align:center;">목록을 불러오는 중...</td></tr>';
-            try {
-                const response = await fetch('/api/hunting-times/');
-                if (!response.ok) { throw new Error(`서버 응답 오류: ${response.status}`); }
-                const sessions = await response.json();
-
-                huntingTableBody.innerHTML = '';
-
-                if (sessions && sessions.length > 0) {
-                     sessions.sort((a, b) => { // 날짜, 그 다음 생성 시간으로 정렬
-                        const dateComparison = new Date(b.session_date) - new Date(a.session_date);
-                        if (dateComparison !== 0) return dateComparison;
-                        return new Date(b.created_at) - new Date(a.created_at);
-                     });
-
-                    sessions.forEach(session => {
-                        const row = huntingTableBody.insertRow();
-
-                        row.insertCell().textContent = session.session_date || 'N/A';
-                        row.insertCell().textContent = session.map_name || 'N/A';
-                        row.insertCell().textContent = session.start_time || 'N/A';
-                        row.insertCell().textContent = session.end_time || 'N/A';
-                        row.insertCell().textContent = (session.start_meso || 0).toLocaleString();
-                        row.insertCell().textContent = (session.end_meso || 0).toLocaleString();
-                        row.insertCell().textContent = (session.sold_meso != null ? session.sold_meso : (session.end_meso || 0)).toLocaleString();
-                        row.insertCell().textContent = (session.entry_fee || 0).toLocaleString();
-                        row.insertCell().textContent = session.coupon_15min_count || 0;
-
-                        // === ✨ 경험치 관련 컬럼 표시 (수정된 부분) ✨ ===
-                        // 10. 시작레벨(%)
-                        let startLevelDisplay = 'N/A';
-                        if (session.start_level !== null && session.start_level !== undefined) {
-                            startLevelDisplay = `${session.start_level} (${session.start_exp_percentage !== null ? session.start_exp_percentage.toFixed(2) : 'N/A'}%)`;
-                        }
-                        row.insertCell().textContent = startLevelDisplay;
-
-                        // 11. 종료레벨(%)
-                        let endLevelDisplay = 'N/A';
-                        if (session.end_level !== null && session.end_level !== undefined) {
-                            endLevelDisplay = `${session.end_level} (${session.end_exp_percentage !== null ? session.end_exp_percentage.toFixed(2) : 'N/A'}%)`;
-                        }
-                        row.insertCell().textContent = endLevelDisplay;
-                        // === ✨ 경험치 관련 컬럼 표시 끝 ✨ ===
-
-                        row.insertCell().textContent = (session.hunting_meso_profit || 0).toLocaleString();
-                        row.insertCell().textContent = (session.normal_item_profit || 0).toLocaleString();
-                        row.insertCell().textContent = (session.total_rare_item_value || 0).toLocaleString();
-                        row.insertCell().textContent = (session.total_consumable_cost || 0).toLocaleString();
-                        row.insertCell().textContent = (session.total_consumable_gained_profit || 0).toLocaleString();
-                        row.insertCell().textContent = (session.total_profit || 0).toLocaleString();
-                        row.insertCell().textContent = (session.net_profit || 0).toLocaleString();
-
-                        // === ✨ 획득 경험치 (gained_exp) 표시 ✨ ===
-                        // 19. 획득경험치 (또는 "경험치수익" 컬럼에 해당)
-                        row.insertCell().textContent = (session.gained_exp !== null && session.gained_exp !== undefined ? session.gained_exp.toLocaleString() : 'N/A');
-                        // === ✨ 획득 경험치 표시 끝 ✨ ===
-
-                        // === ✨ "원경험치" 컬럼 처리 (이제 gained_exp로 통합되었으므로 의미가 없을 수 있음) ✨ ===
-                        // 20. 원경험치
-                        row.insertCell().textContent = 'N/A'; // 또는 이 컬럼을 HTML thead에서 제거하는 것을 고려
-                        // === ✨ "원경험치" 컬럼 처리 끝 ✨ ===
-
-                        row.insertCell().textContent = session.created_at ? new Date(session.created_at).toLocaleString('ko-KR') : 'N/A';
-                    });
-                } else {
-                    huntingTableBody.innerHTML = '<tr><td colspan="21" style="text-align:center;">기록된 사냥 내역이 없습니다.</td></tr>';
+        // --- 시간 입력 자동 포맷 함수 --- (쩔 기록과 동일하게 유지)
+        function formatTimeInput(event) {
+            const inputElement = event.target; let originalValue = inputElement.value.trim();
+            if (!originalValue) return;
+            if (originalValue.match(/^\d{2}:\d{2}$/)) {
+                const parts = originalValue.split(':'); const hour = parseInt(parts[0], 10); const minute = parseInt(parts[1], 10);
+                if (hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) return; 
+                else { inputElement.value = ""; return; }
+            }
+            let cleanedValue = originalValue.toLowerCase().replace(/[^0-9a-z시:\s]/g, "").replace(/\s+/g, "");
+            let digitsOnly = cleanedValue.replace(/[^0-9]/g, ""); 
+            let hourStr = ""; let minuteStr = "00"; let isPM = null; 
+            if (cleanedValue.includes("시")) {
+                const parts = cleanedValue.split("시"); hourStr = parts[0].replace(/[^0-9]/g, "");
+                if (parts.length > 1 && parts[1]) { minuteStr = parts[1].replace(/[^0-9]/g, ""); if(minuteStr.length === 1) minuteStr = `0${minuteStr}`; else if (minuteStr.length > 2) minuteStr = minuteStr.substring(0,2); }
+                else { minuteStr = "00"; }
+                let h = parseInt(hourStr, 10); if (isNaN(h)) { inputElement.value = ""; return; }
+                let AmPmIndicatorInSi = cleanedValue.substring(cleanedValue.indexOf("시") + 1).replace(/[^ap오전후]/g, "");
+                if (AmPmIndicatorInSi.includes("p") || AmPmIndicatorInSi.includes("오후")) isPM = true; 
+                else if (AmPmIndicatorInSi.includes("a") || AmPmIndicatorInSi.includes("오전")) { isPM = false; if (h === 12) h = 0; }
+                if (isPM === null) { if (h >= 1 && h <= 6) isPM = true; else if (h === 12) isPM = true; } // 1~6시는 오후, 12시는 오후로 간주 (애매함 해결)
+                if (isPM && h >= 1 && h <= 11) hourStr = String(h + 12); else if (isPM === false && h === 12) hourStr = "00"; else hourStr = String(h);
+                hourStr = hourStr.padStart(2, '0'); minuteStr = minuteStr.padStart(2, '0');
+            } else if (cleanedValue.includes("p") || cleanedValue.includes("a") || cleanedValue.includes("pm") || cleanedValue.includes("am")) {
+                if (cleanedValue.includes("p")) isPM = true; else if (cleanedValue.includes("a")) isPM = false;
+                let timeDigits = cleanedValue.replace(/[apms오전후]/gi, ""); 
+                if (timeDigits.includes(":")) { const parts = timeDigits.split(":"); hourStr = parts[0]; minuteStr = parts[1] ? parts[1].padStart(2,'0') : "00";}
+                else { 
+                    if (timeDigits.length === 1 || timeDigits.length === 2) { hourStr = timeDigits; minuteStr="00"; } 
+                    else if (timeDigits.length === 3) { hourStr = timeDigits.substring(0,1); minuteStr = timeDigits.substring(1,3); } 
+                    else if (timeDigits.length >= 4) { hourStr = timeDigits.substring(0,2); minuteStr = timeDigits.substring(2,4); }
+                    else { hourStr = ""; } // 빈 문자열로 초기화
                 }
-            } catch (error) {
-                 huntingTableBody.innerHTML = `<tr><td colspan="21" style="text-align:center; color: red;">목록 로드 실패: ${error.message}</td></tr>`;
-                showMessage(`목록 로드 실패: ${error.message}`, 'error');
-                console.error('Error loading hunting sessions:', error);
+                let h = parseInt(hourStr, 10); if (isNaN(h)) { inputElement.value = ""; return; }
+                if (isPM && h >= 1 && h <= 11) hourStr = String(h + 12);
+                else if (isPM === false && h === 12) hourStr = "00"; 
+                else hourStr = String(h);
+                hourStr = hourStr.padStart(2,'0'); minuteStr = minuteStr.padStart(2,'0'); // Ensure minute is also padded
+            } else { 
+                if (digitsOnly.length === 1) { hourStr = `0${digitsOnly}`; }
+                else if (digitsOnly.length === 2) { hourStr = digitsOnly; }
+                else if (digitsOnly.length === 3) { hourStr = `0${digitsOnly.substring(0, 1)}`; minuteStr = digitsOnly.substring(1, 3); }
+                else if (digitsOnly.length >= 4) { hourStr = digitsOnly.substring(0, 2); minuteStr = digitsOnly.substring(2, 4); }
+                else if (originalValue.trim() !== "") { inputElement.value = ""; return; } else { return; }
+            }
+            let finalHour = parseInt(hourStr, 10); let finalMinute = parseInt(minuteStr, 10);
+            if (!isNaN(finalHour) && !isNaN(finalMinute) && finalHour >= 0 && finalHour <= 23 && finalMinute >= 0 && finalMinute <= 59) {
+                inputElement.value = `${String(finalHour).padStart(2, '0')}:${String(finalMinute).padStart(2, '0')}`;
+            } else if (originalValue.trim() !== "") { inputElement.value = ""; }
+        }
+        
+        // --- 아이템 행 추가/삭제 함수 ---
+        function removeItemRow(buttonElement) {
+            buttonElement.closest('.item-row').remove();
+        }
+
+        function addHuntingItemRow(itemType, itemData = {}) {
+            const isInitialConsumableStage1 = itemType === 'initial_consumable';
+            const isConsumableStage2Prefill = itemType === 'consumable_stage2_prefill';
+            const isConsumableStage2New = itemType === 'consumable_stage2_new';
+            const isRareItem = itemType === 'rare';
+
+            let container, baseIdPrefix, itemNamePrefixForForm, namePlaceholder;
+            let nameIsReadOnly = false; let startQtyIsReadOnly = false;
+
+            if (isInitialConsumableStage1) {
+                container = initialConsumableItemsContainerHunting;
+                baseIdPrefix = 'hunt_init_cons_'; itemNamePrefixForForm = 'initial_consumable_items_hunting'; namePlaceholder = "시작 소모품"; // prefixForForm은 submit용이 아님
+            } else if (isRareItem) {
+                container = rareItemsContainerHunting;
+                baseIdPrefix = 'hunt_rare_'; itemNamePrefixForForm = 'rare_items'; namePlaceholder = "고가 아이템";
+            } else if (isConsumableStage2Prefill || isConsumableStage2New) {
+                container = consumableItemsContainerHunting;
+                baseIdPrefix = 'hunt_cons_'; itemNamePrefixForForm = 'consumable_items'; namePlaceholder = "소모/획득 아이템";
+                if (isConsumableStage2Prefill) { nameIsReadOnly = true; startQtyIsReadOnly = true; }
+            } else { 
+                console.error(`HUNTING PAGE: Unknown itemType "${itemType}"`); 
+                showMessageHunting(`알 수 없는 아이템 타입(${itemType}) 입니다.`, "error", 3000);
+                return; 
+            }
+
+            if (!container) { 
+                console.error(`HUNTING PAGE: Container for ${itemType} not found!`); 
+                showMessageHunting("아이템 추가 영역을 찾지 못했습니다.", "error", 3000); 
+                return; 
+            }
+            
+            const formArrayIndex = container.children.length; 
+            const elementIdSuffix = Date.now() + "_" + Math.random().toString(36).substring(2, 7);
+            const div = document.createElement('div'); div.classList.add('item-row');
+            let rowHtml = '';
+
+            if (isRareItem) {
+                rowHtml = `
+                    <label for="${baseIdPrefix}name_${elementIdSuffix}">아이템명:</label>
+                    <input type="text" id="${baseIdPrefix}name_${elementIdSuffix}" name="${itemNamePrefixForForm}[${formArrayIndex}][item_name]" value="${itemData.item_name || ''}" placeholder="${namePlaceholder}" class="item-name">
+                    <label for="${baseIdPrefix}value_${elementIdSuffix}">예상 가치:</label>
+                    <input type="number" id="${baseIdPrefix}value_${elementIdSuffix}" name="${itemNamePrefixForForm}[${formArrayIndex}][item_value]" value="${itemData.item_value || 0}" min="0" class="item-value">`;
+            } else { 
+                const nameValue = itemData.item_name || "";
+                const startQtyValue = itemData.start_quantity || 0;
+                rowHtml = `
+                    <label for="${baseIdPrefix}name_${elementIdSuffix}">명칭:</label>
+                    <input type="text" id="${baseIdPrefix}name_${elementIdSuffix}" name="${itemNamePrefixForForm}[${formArrayIndex}][item_name]" value="${nameValue}" placeholder="${namePlaceholder}" class="item-name" ${nameIsReadOnly ? 'readonly' : ''}>
+                    <label for="${baseIdPrefix}start_qty_${elementIdSuffix}">시작 수량:</label>
+                    <input type="number" id="${baseIdPrefix}start_qty_${elementIdSuffix}" name="${itemNamePrefixForForm}[${formArrayIndex}][start_quantity]" value="${startQtyValue}" min="0" class="item-qty" ${startQtyIsReadOnly ? 'readonly' : ''}>`;
+                
+                if (isConsumableStage2Prefill || isConsumableStage2New) {
+                    const priceValue = itemData.price_or_value_per_item || 0; // 1단계에서 넘어올땐 itemData에 이게 없을수도
+                    const endQtyValue = itemData.end_quantity || 0; // 1단계에서 넘어올땐 itemData에 이게 없을수도
+                    rowHtml += `
+                        <label for="${baseIdPrefix}price_${elementIdSuffix}">개당 가격/가치:</label>
+                        <input type="number" id="${baseIdPrefix}price_${elementIdSuffix}" name="${itemNamePrefixForForm}[${formArrayIndex}][price_or_value_per_item]" value="${priceValue}" min="0" class="item-value">
+                        <label for="${baseIdPrefix}end_qty_${elementIdSuffix}">종료 수량:</label>
+                        <input type="number" id="${baseIdPrefix}end_qty_${elementIdSuffix}" name="${itemNamePrefixForForm}[${formArrayIndex}][end_quantity]" value="${endQtyValue}" min="0" class="item-qty">`;
+                } else { // isInitialConsumableStage1 (1단계 소모품)의 경우, 쩔 기록과 같이 hidden 필드 추가하여 구조 통일
+                     rowHtml += `<input type="hidden" name="${itemNamePrefixForForm}[${formArrayIndex}][price_or_value_per_item]" value="0">
+                                 <input type="hidden" name="${itemNamePrefixForForm}[${formArrayIndex}][end_quantity]" value="${startQtyValue}">`; // end_quantity는 시작 수량과 동일하게 (어차피 사용 안함)
+                }
+            }
+            rowHtml += `<button type="button" onclick="removeItemRow(this)" class="remove-item-btn">X</button>`;
+            div.innerHTML = rowHtml; container.appendChild(div);
+        }
+
+
+        // --- 세트 기능 함수 --- (쩔 기록 페이지와 유사하게 메시지 처리)
+        function getHuntingItemSetStorageKey(itemType) { 
+            const typeKey = (itemType === 'consumable_stage2_prefill' || itemType === 'consumable_stage2_new') ? 'consumable' : itemType;
+            return `${LS_ITEM_SETS_HUNTING_KEY_PREFIX}${typeKey}`; 
+        }
+
+        function saveHuntingItemSet(itemType) {
+            let container;
+            if (itemType === 'initial_consumable') container = initialConsumableItemsContainerHunting;
+            else if (itemType === 'rare') container = rareItemsContainerHunting;
+            else if (itemType === 'consumable') container = consumableItemsContainerHunting;
+            else { console.error("SaveSet (Hunting): Unknown itemType", itemType); return; }
+
+            if (!container) { showMessageHunting("아이템 목록 컨테이너를 찾을 수 없습니다.", "error", 3000); return; }
+
+            const setName = prompt("저장할 세트의 이름을 입력하세요:");
+            if (!setName || !setName.trim()) { 
+                showMessageHunting("세트 이름이 유효하지 않아 저장이 취소되었습니다.", "info", 3000); 
+                return; 
+            }
+
+            const items = [];
+            container.querySelectorAll('.item-row').forEach(row => {
+                const nameInput = row.querySelector('input[name*="[item_name]"]');
+                const name = nameInput ? nameInput.value.trim() : "";
+                if (!name) return; 
+
+                const item = { item_name: name };
+                if (itemType === 'rare') {
+                    const valueInput = row.querySelector('input[name*="[item_value]"]');
+                    item.item_value = valueInput ? (parseInt(valueInput.value) || 0) : 0;
+                } else { 
+                    const startQtyInput = row.querySelector('input[name*="[start_quantity]"]');
+                    item.start_quantity = startQtyInput ? (parseInt(startQtyInput.value) || 0) : 0;
+                    
+                    if (itemType === 'consumable') { 
+                        const priceInput = row.querySelector('input[name*="[price_or_value_per_item]"]');
+                        const endQtyInput = row.querySelector('input[name*="[end_quantity]"]');
+                        item.price_or_value_per_item = priceInput ? (parseInt(priceInput.value) || 0) : 0;
+                        item.end_quantity = endQtyInput ? (parseInt(endQtyInput.value) || 0) : 0;
+                    } else { // initial_consumable
+                        item.price_or_value_per_item = 0; // 기본값
+                        item.end_quantity = item.start_quantity; // 기본값
+                    }
+                }
+                items.push(item);
+            });
+
+            if (items.length === 0) { showMessageHunting("세트에 저장할 아이템이 없습니다.", "info", 3000); return; }
+            
+            const storageKey = getHuntingItemSetStorageKey(itemType);
+            let sets = JSON.parse(localStorage.getItem(storageKey)) || {};
+            sets[setName.trim()] = items;
+            localStorage.setItem(storageKey, JSON.stringify(sets));
+            showMessageHunting(`'${setName.trim()}' 세트가 저장되었습니다.`, 'success', 3000);
+            loadItemSetOptionsHunting(itemType); 
+        }
+
+        function loadHuntingItemSet(itemType) {
+            const selectElementId = itemType === 'initial_consumable' ? 'initialConsumableItemSetSelectHunting' : 
+                                    (itemType === 'rare' ? 'rareItemSetSelectHunting' : 'consumableItemSetSelectHunting');
+            const selectElement = document.getElementById(selectElementId);
+            
+            let container;
+            if (itemType === 'initial_consumable') container = initialConsumableItemsContainerHunting;
+            else if (itemType === 'rare') container = rareItemsContainerHunting;
+            else if (itemType === 'consumable') container = consumableItemsContainerHunting;
+            else { console.error("LoadSet (Hunting): Unknown itemType", itemType); return; }
+
+            if (!selectElement || !container) { showMessageHunting("세트 로드 요소를 찾을 수 없습니다.", "error", 3000); return;}
+            const setName = selectElement.value;
+            if (!setName) { showMessageHunting("불러올 세트를 선택하세요.", "error", 3000); return; }
+
+            const storageKey = getHuntingItemSetStorageKey(itemType);
+            const sets = JSON.parse(localStorage.getItem(storageKey)) || {};
+            const itemsToLoad = sets[setName];
+            if (!itemsToLoad) { showMessageHunting("선택한 세트를 찾을 수 없습니다.", "error", 3000); return; }
+
+            container.innerHTML = ''; 
+            itemsToLoad.forEach(itemData => {
+                const typeForAddRow = (itemType === 'consumable') ? 'consumable_stage2_new' : itemType;
+                addHuntingItemRow(typeForAddRow, itemData); 
+            });
+            showMessageHunting(`'${setName}' 세트를 불러왔습니다.`, 'success', 3000);
+        }
+        
+        function loadItemSetOptionsHunting(itemType) {
+            const selectElementId = itemType === 'initial_consumable' ? 'initialConsumableItemSetSelectHunting' :
+                                    (itemType === 'rare' ? 'rareItemSetSelectHunting' : 'consumableItemSetSelectHunting');
+            const selectElement = document.getElementById(selectElementId);
+            if (!selectElement) { 
+                console.warn(`Set select element not found for ${itemType} (ID: ${selectElementId})`); 
+                return; 
+            }
+            
+            const storageKey = getHuntingItemSetStorageKey(itemType);
+            const sets = JSON.parse(localStorage.getItem(storageKey)) || {};
+            
+            const currentSelectedValue = selectElement.value;
+            selectElement.innerHTML = '<option value="">세트 선택...</option>'; 
+            for (const setName in sets) {
+                if (sets.hasOwnProperty(setName)) {
+                    const option = document.createElement('option'); option.value = setName; option.textContent = setName;
+                    selectElement.appendChild(option);
+                }
+            }
+            if (sets.hasOwnProperty(currentSelectedValue)) { 
+                selectElement.value = currentSelectedValue;
             }
         }
 
-        function showMessage(message, type = 'info') {
-            messageArea.textContent = message;
-            messageArea.className = 'message-area ' + type; // 클래스 추가시 공백 중요
+        function deleteHuntingItemSet(itemType) {
+            const selectElementId = itemType === 'initial_consumable' ? 'initialConsumableItemSetSelectHunting' :
+                                    (itemType === 'rare' ? 'rareItemSetSelectHunting' : 'consumableItemSetSelectHunting');
+            const selectElement = document.getElementById(selectElementId);
+            if (!selectElement) return;
+            const setName = selectElement.value;
+            if (!setName) { showMessageHunting("삭제할 세트를 선택하세요.", "error", 3000); return; }
+
+            if (confirm(`'${setName}' 세트를 정말 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`)) {
+                const storageKey = getHuntingItemSetStorageKey(itemType);
+                let sets = JSON.parse(localStorage.getItem(storageKey)) || {};
+                delete sets[setName];
+                localStorage.setItem(storageKey, JSON.stringify(sets));
+                showMessageHunting(`'${setName}' 세트가 삭제되었습니다.`, 'success', 3000);
+                loadItemSetOptionsHunting(itemType); 
+            }
+        }
+        
+        // --- 컬럼 표시/숨김 기능 함수 ---
+        function loadColumnVisibility(storageKey, columnsConfig) {
+            const savedSettings = localStorage.getItem(storageKey);
+            let visibility = {};
+            if (savedSettings) {
+                try { visibility = JSON.parse(savedSettings); } catch(e) { console.error("Error parsing column visibility from LS", e); }
+            }
+            columnsConfig.forEach(col => {
+                if (visibility[col.key] === undefined) {
+                    visibility[col.key] = col.defaultVisible !== undefined ? col.defaultVisible : true;
+                }
+                if (col.noToggle) visibility[col.key] = true;
+            });
+            return visibility;
         }
 
-        function resetHuntingForm() {
+        function saveColumnVisibility(storageKey, visibilityConfig) { 
+            localStorage.setItem(storageKey, JSON.stringify(visibilityConfig)); 
+        }
+        
+        function renderHuntingTableHeaders() {
+            if (!huntingTableHead) return;
+            huntingTableHead.innerHTML = ''; 
+            const headerRow = huntingTableHead.insertRow();
+            huntingTableColumns.forEach(col => {
+                if (huntingColumnVisibility[col.key]) {
+                    const th = document.createElement('th');
+                    th.textContent = col.header;
+                    th.dataset.key = col.key; 
+                    headerRow.appendChild(th);
+                }
+            });
+        }
+        
+        function setupColumnTogglePopup(storageKey, columnsConfig, currentVisibility, popupId, headerRenderFunc, dataRenderFunc) {
+            const popup = document.getElementById(popupId);
+            if (!popup) { console.error(`Popup with id "${popupId}" not found!`); return; }
+            
+            popup.innerHTML = ''; 
+            columnsConfig.forEach(col => {
+                if (col.noToggle) return; 
+
+                const label = document.createElement('label'); // 쩔 기록처럼 label로 감쌈
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.id = `toggle_col_hunt_${col.key}`; 
+                checkbox.value = col.key;
+                checkbox.checked = !!currentVisibility[col.key]; 
+                checkbox.addEventListener('change', function() {
+                    currentVisibility[this.value] = this.checked;
+                    saveColumnVisibility(storageKey, currentVisibility);
+                    headerRenderFunc(); 
+                    dataRenderFunc(currentHuntingSessionsData); // 현재 데이터로 바디 다시 렌더링
+                });
+                
+                label.appendChild(checkbox); // 체크박스를 먼저 추가
+                label.appendChild(document.createTextNode(` ${col.header}`)); // 그 다음 텍스트
+                popup.appendChild(label); // 완성된 레이블을 팝업에 추가
+            });
+            const closeBtn = document.createElement('button');
+            closeBtn.textContent = '닫기';
+            closeBtn.onclick = () => { toggleColumnPopupHunting(); }; // 팝업 닫기 함수 호출
+            popup.appendChild(closeBtn);
+        }
+
+        function toggleColumnPopupHunting() { // 쩔 기록의 toggleColumnPopupJjul과 유사하게 수정
+            if (!huntingColumnTogglePopup) return;
+
+            if (huntingColumnTogglePopup.style.display === 'block') {
+                huntingColumnTogglePopup.style.display = 'none';
+            } else {
+                huntingColumnTogglePopup.style.display = 'block';
+                const button = document.getElementById('toggleHuntingColumnsBtn');
+                if (button) {
+                    const rect = button.getBoundingClientRect();
+                    let top = rect.bottom + window.scrollY;
+                    let left = rect.left + window.scrollX;
+
+                    // 팝업이 버튼에 너무 가깝지 않게 약간의 오프셋 추가
+                    top += 5; 
+
+                    huntingColumnTogglePopup.style.top = top + 'px';
+                    huntingColumnTogglePopup.style.left = left + 'px';
+                    
+                    // 화면 경계를 벗어나는 경우 위치 조정
+                    if (left + huntingColumnTogglePopup.offsetWidth > window.innerWidth) {
+                        // 오른쪽으로 넘칠 경우, 버튼의 오른쪽 끝에 팝업의 오른쪽 끝을 맞춤
+                        left = rect.right + window.scrollX - huntingColumnTogglePopup.offsetWidth;
+                        huntingColumnTogglePopup.style.left = (left < 0 ? 0 : left) + 'px'; // 화면 왼쪽을 벗어나지 않도록
+                    }
+                    if (top + huntingColumnTogglePopup.offsetHeight > window.innerHeight + window.scrollY) {
+                         // 아래로 넘칠 경우, 버튼의 위쪽에 팝업의 아래쪽 끝을 맞춤
+                         top = rect.top + window.scrollY - huntingColumnTogglePopup.offsetHeight - 5;
+                         huntingColumnTogglePopup.style.top = (top < 0 ? 0 : top) + 'px'; // 화면 위쪽을 벗어나지 않도록
+                    }
+                }
+            }
+        }
+
+        // --- 이전 기록 불러오기 함수 ---
+        async function loadPreviousHuntingData() {
+            showMessageHunting('이전 기록을 불러오는 중...', 'info');
+            try {
+                const response = await fetch('/api/hunting-times/last/');
+                if (!response.ok) {
+                    if (response.status === 404) { // 404는 "데이터 없음"으로 처리
+                         showMessageHunting('불러올 이전 사냥 기록이 없습니다.', 'info', 3000); return;
+                    }
+                    let errorDetail = `서버 응답 오류: ${response.status}`;
+                    try { const errorData = await response.json(); if(errorData.detail) errorDetail = errorData.detail; } catch (e) {}
+                    throw new Error(errorDetail);
+                }
+                const data = await response.json();
+                if (data && Object.keys(data).length > 0) {
+                    if(sessionDateFlatpickrInstanceHunting) sessionDateFlatpickrInstanceHunting.setDate(data.session_date || new Date().toISOString().split('T')[0], false); 
+                    if(document.getElementById('map_name_hunting')) document.getElementById('map_name_hunting').value = data.map_name || '';
+                    if(document.getElementById('start_level_hunting')) document.getElementById('start_level_hunting').value = data.end_level !== null ? data.end_level : (data.start_level || 0);
+                    if(document.getElementById('start_exp_percentage_hunting')) document.getElementById('start_exp_percentage_hunting').value = (data.end_exp_percentage !== null ? Number(data.end_exp_percentage) : (Number(data.start_exp_percentage) || 0.00)).toFixed(2);
+                    if(document.getElementById('entry_fee_hunting')) document.getElementById('entry_fee_hunting').value = data.entry_fee || 0; 
+                    if(startTimeInputHunting) startTimeInputHunting.value = data.end_time || ""; 
+                    if(startTimeInputHunting.value) formatTimeInput({target: startTimeInputHunting}); 
+                    
+                    if (data.consumable_items_detail && initialConsumableItemsContainerHunting) {
+                        try {
+                            const prevConsumables = JSON.parse(data.consumable_items_detail);
+                            if (Array.isArray(prevConsumables)) {
+                                initialConsumableItemsContainerHunting.innerHTML = '';
+                                prevConsumables.forEach(consItem => {
+                                    addHuntingItemRow('initial_consumable', {
+                                        item_name: consItem.item_name,
+                                        start_quantity: consItem.start_quantity || 0 
+                                    });
+                                });
+                            }
+                        } catch (e) { console.warn("이전 기록의 소모품 파싱 중 오류:", e); }
+                    }
+                    showMessageHunting('이전 기록을 참고하여 일부 정보를 불러왔습니다. 날짜, 시작 메소 및 소모품 등은 직접 확인 후 입력하거나 세트 기능을 이용해주세요.', 'success', 5000);
+                } else {
+                    showMessageHunting('불러올 이전 사냥 기록이 없습니다 또는 데이터가 비어있습니다.', 'info', 3000);
+                }
+            } catch (error) {
+                showMessageHunting(`이전 기록 로드 중 오류: ${error.message}`, 'error', 5000);
+                console.error('Error loading previous hunting data:', error);
+            }
+        }
+
+        // --- 폼 제출 핸들러 ---
+        huntingForm.addEventListener('submit', async function(event) {
+            event.preventDefault();
+            showMessageHunting('기록 추가 및 계산 중...', 'info');
+            
+            const data = {};
+            data.session_date = document.getElementById('session_date_flatpickr_hunting').value;
+            data.map_name = document.getElementById('map_name_hunting').value;
+            data.start_time = document.getElementById('start_time_hunting').value;
+            data.entry_fee = parseInt(document.getElementById('entry_fee_hunting').value) || 0;
+            data.start_meso = parseInt(document.getElementById('start_meso_hunting').value) || 0;
+            data.start_level = parseInt(document.getElementById('start_level_hunting').value) || 0;
+            data.start_exp_percentage = parseFloat(document.getElementById('start_exp_percentage_hunting').value) || 0.0;
+            
+            data.end_time = document.getElementById('end_time_hunting').value;
+            data.end_meso = parseInt(document.getElementById('end_meso_hunting').value) || 0;
+            data.sold_meso = parseInt(document.getElementById('sold_meso_hunting').value) || 0;
+            
+            let endLevelVal = document.getElementById('end_level_hunting').value;
+            data.end_level = endLevelVal === '' ? (data.start_level !== null ? data.start_level : null) : (parseInt(endLevelVal) || null) ;
+            let endExpPercentageVal = document.getElementById('end_exp_percentage_hunting').value;
+            data.end_exp_percentage = endExpPercentageVal === '' ? (data.end_level !== null && data.end_level === data.start_level ? data.start_exp_percentage : 0.0) : (parseFloat(endExpPercentageVal) || 0.0); 
+            if (data.end_level === null) data.end_exp_percentage = null; 
+            
+            data.coupon_15min_count = parseInt(document.getElementById('coupon_15min_count_hunting').value) || 0;
+
+            let raw_rare_items = []; data.total_rare_item_value = 0;
+            if(rareItemsContainerHunting) rareItemsContainerHunting.querySelectorAll('.item-row').forEach(row => {
+                const nameInput = row.querySelector('input[name*="[item_name]"]');
+                const valueInput = row.querySelector('input[name*="[item_value]"]');
+                if (nameInput && nameInput.value.trim() && valueInput) {
+                    const name = nameInput.value.trim(); const value = parseInt(valueInput.value) || 0;
+                    raw_rare_items.push({ item_name: name, item_value: value }); data.total_rare_item_value += value;
+                }
+            });
+            data.rare_items_detail = JSON.stringify(raw_rare_items);
+
+            let final_consumable_items_for_submit = []; data.total_consumable_cost = 0; data.total_consumable_gained_profit = 0;
+            if(consumableItemsContainerHunting) { 
+                consumableItemsContainerHunting.querySelectorAll('.item-row').forEach(row => {
+                    const nameInput = row.querySelector('input[name*="[item_name]"]');
+                    const priceInput = row.querySelector('input[name*="[price_or_value_per_item]"]');
+                    const startQtyInput = row.querySelector('input[name*="[start_quantity]"]');
+                    const endQtyInput = row.querySelector('input[name*="[end_quantity]"]');
+                    if (nameInput && nameInput.value.trim() && priceInput && startQtyInput && endQtyInput) {
+                        const name = nameInput.value.trim(); const price = parseInt(priceInput.value) || 0;
+                        const startQty = parseInt(startQtyInput.value) || 0; const endQty = parseInt(endQtyInput.value) || 0;
+                        final_consumable_items_for_submit.push({ item_name: name, price_or_value_per_item: price, start_quantity: startQty, end_quantity: endQty });
+                        const quantity_change = endQty - startQty;
+                        if (quantity_change < 0) { data.total_consumable_cost += (-quantity_change * price); }
+                        else if (quantity_change > 0) { data.total_consumable_gained_profit += (quantity_change * price); }
+                    }
+                });
+            }
+            data.consumable_items_detail = JSON.stringify(final_consumable_items_for_submit);
+
+            data.hunting_meso_profit = (data.end_meso || 0) - (data.start_meso || 0);
+            let actual_sold_meso_for_hunting = data.sold_meso;
+            if ((data.sold_meso === null || data.sold_meso === 0) && (data.end_meso !== null && data.end_meso > 0) ){
+                 actual_sold_meso_for_hunting = data.end_meso;
+            }
+            data.normal_item_profit = actual_sold_meso_for_hunting - (data.end_meso || 0);
+            if (data.normal_item_profit < 0) data.normal_item_profit = 0; 
+            data.total_profit = (data.hunting_meso_profit || 0) + (data.normal_item_profit || 0) + (data.total_rare_item_value || 0) + (data.total_consumable_gained_profit || 0);
+            data.net_profit = (data.total_profit || 0) - (data.total_consumable_cost || 0) - (data.entry_fee || 0);
+            
+            try {
+                const response = await fetch('/api/hunting-times/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+                if (!response.ok) { 
+                    const responseText = await response.text(); let detail = responseText;
+                    try { detail = JSON.parse(responseText).detail || responseText; } catch(e){}
+                    throw new Error(detail || `HTTP error ${response.status}`);
+                }
+                const result = await response.json();
+                showMessageHunting('사냥 기록이 성공적으로 추가되었습니다.', 'success', 3000);
+                resetHuntingForm(true); 
+                loadHuntingSessions(); 
+            } catch (error) { showMessageHunting(`기록 추가 오류: ${error.message}`, 'error', 5000); console.error('Error adding hunting session:', error); }
+        });
+
+        // --- 사냥 기록 목록 로드 및 표시 함수 ---
+        async function loadHuntingSessions() {
+            if (!huntingTableBody || !huntingTableHead) { 
+                console.error("HUNTING: Table body or head not found for loadHuntingSessions!"); 
+                return; 
+            }
+            showMessageHunting('사냥 기록 목록을 불러오는 중...', 'info');
+            const colspanCount = Object.values(huntingColumnVisibility).filter(v => v).length || huntingTableColumns.length;
+            huntingTableBody.innerHTML = `<tr><td colspan="${colspanCount}" style="text-align:center;">목록을 불러오는 중...</td></tr>`;
+            
+            try {
+                const response = await fetch('/api/hunting-times/');
+                if (!response.ok) { 
+                    const errorData = await response.json().catch(() => ({ detail: `서버 응답 오류: ${response.status}` }));
+                    throw new Error(errorData.detail || `서버 응답 오류: ${response.status}`);
+                }
+                const sessions = await response.json();
+                currentHuntingSessionsData = sessions; 
+                renderHuntingTableHeaders(); 
+                renderHuntingTableBody(sessions);    
+                showMessageHunting(''); // 로딩 완료 후 메시지 숨김 (성공 메시지는 renderHuntingTableBody에서 처리 가능)
+            } catch (error) { 
+                console.error('사냥 기록 목록 로딩 오류:', error);
+                showMessageHunting(`목록 로드 실패: ${error.message}`, 'error', 5000);
+                huntingTableBody.innerHTML = `<tr><td colspan="${colspanCount}" style="text-align:center; color: red;">목록 로드 실패: ${error.message}</td></tr>`;
+            }
+        }
+
+        function renderHuntingTableBody(sessions) { // loadHuntingSessions에서 호출, sessions 데이터를 인자로 받음
+            if (!huntingTableBody) return;
+            huntingTableBody.innerHTML = ''; 
+            const colspanCount = Object.values(huntingColumnVisibility).filter(v => v).length || huntingTableColumns.length;
+
+            if (!sessions || sessions.length === 0) {
+                huntingTableBody.innerHTML = `<tr><td colspan="${colspanCount}" style="text-align:center;">기록된 사냥 내역이 없습니다.</td></tr>`;
+                return;
+            }
+            
+            // 쩔 기록과 동일한 정렬 (날짜 최신순, 다음으로 ID 최신순)
+            sessions.sort((a, b) => {
+                const dateComparison = new Date(b.session_date) - new Date(a.session_date);
+                if (dateComparison !== 0) return dateComparison;
+                return (b.id || 0) - (a.id || 0); // id가 없을 경우 0으로 처리
+            });
+
+            sessions.forEach(session => {
+                const row = huntingTableBody.insertRow();
+                huntingTableColumns.forEach(col => {
+                    if (huntingColumnVisibility[col.key]) {
+                        const cell = row.insertCell();
+                        let cellValue = session[col.key];
+
+                        if (col.key === 'actions') {
+                            cell.innerHTML = ''; // 기존 내용 비우기
+                            const deleteBtn = document.createElement('button'); 
+                            deleteBtn.textContent = '삭제'; 
+                            deleteBtn.className = 'remove-item-btn'; // 쩔 기록처럼 클래스 사용
+                            deleteBtn.style.backgroundColor = '#d9534f'; deleteBtn.style.color = 'white'; // 쩔 기록 삭제 버튼 스타일
+                            deleteBtn.onclick = function() { deleteHuntingSession(session.id); }; 
+                            cell.appendChild(deleteBtn); 
+                        } else if (col.key === 'start_level_display') {
+                            cellValue = (session.start_level !== null && session.start_level !== undefined) ? 
+                                `${session.start_level} (${(Number(session.start_exp_percentage) || 0.0).toFixed(2)}%)` : 'N/A';
+                        } else if (col.key === 'end_level_display') {
+                            cellValue = (session.end_level !== null && session.end_level !== undefined) ? 
+                                `${session.end_level} (${(Number(session.end_exp_percentage) || 0.0).toFixed(2)}%)` : 'N/A';
+                        } else if (col.key === 'created_at_display' && session.created_at) {
+                            cellValue = new Date(session.created_at).toLocaleString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false });
+                        } else if (col.type === 'number' && typeof cellValue === 'number') {
+                            cellValue = cellValue.toLocaleString();
+                        } else if (cellValue === null || cellValue === undefined) {
+                            cellValue = (col.type === 'number' || ['duration_minutes', 'coupon_15min_count'].includes(col.key)) ? '0' : 'N/A';
+                        }
+                        cell.textContent = cellValue;
+                        if(col.class) cell.classList.add(col.class);
+                    }
+                });
+            });
+        }
+        
+        // --- 삭제 기능 함수 ---
+        // templates/list_and_add_hunting_sessions.html 내 deleteHuntingSession 함수 수정 예시
+        async function deleteHuntingSession(sessionId) {
+            if (!confirm(`사냥 기록 ID ${sessionId}번을 정말 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`)) return;
+            showMessageHunting(`ID ${sessionId} 사냥 기록 삭제 중...`, 'info');
+            console.log(`[DEBUG JS] Deleting hunting session with ID: ${sessionId}`); // sessionId 확인
+
+            try {
+                const response = await fetch(`/api/hunting-times/${sessionId}`, { method: 'DELETE' });
+                console.log(`[DEBUG JS] API Response Status: ${response.status}`); // 응답 상태 확인
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({detail: "삭제 중 알 수 없는 서버 오류 발생"})); // 서버 응답이 JSON이 아닐 수도 있음
+                    console.error('[DEBUG JS] Delete Error Data:', errorData);
+                    throw new Error(errorData.detail || `HTTP error ${response.status}`);
+                }
+                const result = await response.json();
+                showMessageHunting(result.message || `ID ${sessionId} 기록이 삭제되었습니다.`, 'success', 3000);
+                loadHuntingSessions(); // 목록 새로고침
+            } catch (error) {
+                showMessageHunting(`삭제 오류: ${error.message}`, 'error', 5000);
+                console.error('[DEBUG JS] Error deleting hunting session:', error);
+            }
+        }
+
+        async function deleteAllHuntingSessions() { // 쩔 기록의 deleteAllJjulSessions와 유사하게 수정
+            const recordType = "사냥"; 
+            const confirmationMessage = `정말로 모든 ${recordType} 기록을 삭제하시겠습니까? 이 작업은 되돌릴 수 없으며, 저장된 모든 ${recordType} 데이터가 영구적으로 사라집니다. 계속하시려면 '확인'을, 취소하시려면 '취소'를 누르세요.`;
+
+            if (!confirm(confirmationMessage)) {
+                showMessageHunting(`${recordType} 기록 전체 삭제가 취소되었습니다.`, 'info', 3000);
+                return;
+            }
+            
+            // 추가적인 안전 장치 (선택 사항, 쩔 기록 페이지와 동일하게 주석 처리)
+            // const safetyCheck = prompt(`데이터를 완전히 삭제하려면 "${recordType} 전체 삭제"라고 정확히 입력해주세요.`);
+            // if (safetyCheck !== `${recordType} 전체 삭제`) {
+            //     showMessageHunting('입력이 일치하지 않아 삭제가 취소되었습니다.', 'info', 3000);
+            //     return;
+            // }
+
+            showMessageHunting(`모든 ${recordType} 기록 삭제 중...`, 'info');
+
+            try {
+                const response = await fetch('/api/hunting-times/all/', { 
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                if (!response.ok) {
+                    let errorDetail = `서버 응답 오류: ${response.status}`; 
+                    try { const errorData = await response.json(); errorDetail = errorData.detail || errorDetail; } 
+                    catch (e) { console.warn("JSON 파싱 실패 또는 서버에서 JSON 오류 응답 없음:", e); }
+                    throw new Error(errorDetail);
+                }
+
+                const result = await response.json(); 
+                showMessageHunting(result.message || `총 ${result.deleted_count || 0}개의 ${recordType} 기록이 성공적으로 삭제되었습니다.`, 'success', 4000);
+                loadHuntingSessions(); 
+            } catch (error) {
+                console.error(`전체 ${recordType} 기록 삭제 중 오류 발생:`, error);
+                showMessageHunting(`오류: ${error.message}`, 'error', 5000);
+            }
+        }
+
+        // --- 유틸리티 함수 --- (쩔 기록의 showMessageJjul과 동일한 구조)
+        function showMessageHunting(message, type = 'info', duration = 0) {
+            const messageArea = document.getElementById('message-area-hunting');
+            if (!messageArea) {
+                console.warn("messageAreaHunting 요소를 찾을 수 없습니다. Message:", message);
+                return;
+            }
+            messageArea.textContent = message;
+            messageArea.className = 'message-area ' + type; 
+            messageArea.style.display = message ? 'block' : 'none';
+
+            if (duration > 0) {
+                setTimeout(() => {
+                    // 메시지가 동일할 경우에만 숨김 (다른 메시지로 이미 변경된 경우 유지)
+                    if (messageArea.textContent === message && messageArea.style.display === 'block') { 
+                        messageArea.style.display = 'none';
+                    }
+                }, duration);
+            }
+        }
+
+        function resetHuntingForm(resetToStage1 = true) {
+            if (!huntingForm) return;
             huntingForm.reset();
-            document.getElementById('session_date').value = new Date().toISOString().split('T')[0];
-            rareItemsContainer.innerHTML = '';
-            consumableItemsContainer.innerHTML = '';
-            showMessage('');
+            if (sessionDateFlatpickrInstanceHunting) {
+                sessionDateFlatpickrInstanceHunting.setDate(new Date().toISOString().split('T')[0], false);
+            }
+            if(startTimeInputHunting) startTimeInputHunting.value = "";
+            if(endTimeInputHunting) endTimeInputHunting.value = "";
+            
+            if(initialConsumableItemsContainerHunting) initialConsumableItemsContainerHunting.innerHTML = ''; 
+            if(rareItemsContainerHunting) rareItemsContainerHunting.innerHTML = '';
+            if(consumableItemsContainerHunting) consumableItemsContainerHunting.innerHTML = '';
+            
+            tempInitialConsumablesHunting = []; 
+
+            if (resetToStage1 && formStage1Hunting && formStage2Hunting && startHuntingBtn && finalSubmitButtonHunting && loadPreviousHuntingDataBtn) {
+                formStage1Hunting.style.display = 'block'; formStage1Hunting.classList.add('active');
+                formStage2Hunting.style.display = 'none'; formStage2Hunting.classList.remove('active');
+                startHuntingBtn.style.display = 'inline-block'; 
+                finalSubmitButtonHunting.style.display = 'none';
+                loadPreviousHuntingDataBtn.style.display = 'inline-block';
+            }
+            showMessageHunting(''); // 기존 메시지 지우기
         }
     </script>
 </body>
