@@ -580,8 +580,8 @@ def get_map_summary(db: Session, start_date: Optional[datetime.date] = None, end
 
 def get_weekday_summary(db: Session, start_date: Optional[datetime.date] = None, end_date: Optional[datetime.date] = None) -> List[schemas.WeekdaySummaryItem]:
     python_weekday_order = ["월요일", "화요일", "수요일", "목요일", "금요일", "토요일", "일요일"]
-    db_weekday_expression_hunt = cast(func.strftime('%w', models.HuntingSessionLog.session_date), SQLInteger)
-    db_weekday_expression_jjul = cast(func.strftime('%w', models.JjulSessionLog.session_date), SQLInteger)
+    db_weekday_expression_hunt = cast(extract('dow', models.HuntingSessionLog.session_date), SQLInteger)
+    db_weekday_expression_jjul = cast(extract('dow', models.JjulSessionLog.session_date), SQLInteger)
 
     hunting_query = db.query(
         db_weekday_expression_hunt.label("weekday_num_db"),
@@ -850,7 +850,7 @@ def get_experience_summary_by_weekday(
     end_date: Optional[datetime.date] = None
 ) -> List[schemas.ExperienceWeekdaySummaryItem]:
     py_weekday_order = ["월요일", "화요일", "수요일", "목요일", "금요일", "토요일", "일요일"]
-    db_weekday_expression = cast(func.strftime('%w', models.HuntingSessionLog.session_date), SQLInteger)
+    db_weekday_expression = cast(extract('dow', models.HuntingSessionLog.session_date), SQLInteger)a
     
     query = db.query(
         db_weekday_expression.label("weekday_num_db"),
