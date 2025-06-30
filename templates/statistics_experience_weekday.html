@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>요일별 경험치 통계</title> <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <style>
+        /* 기본 스타일 (다른 통계 페이지와 유사) */
+        body { font-family: 'Arial', sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; color: #333; display: flex; flex-direction: column; min-height: 100vh; }
+        header { background: #333; color: #fff; padding: 1.8rem 0; text-align: center; }
+        header h1 { margin: 0; font-size: 1.8rem; }
+        nav { background: #444; padding: 0.5rem 0; }
+        nav ul { padding: 0; list-style: none; text-align: center; margin: 0; }
+        nav ul li { display: inline-block; margin: 0 5px; }
+        nav ul li a { text-decoration: none; color: #fff; padding: 10px 15px; display: inline-block; border-radius: 4px; transition: background-color 0.3s ease; }
+        nav ul li a:hover, nav ul li a.active { background-color: #555; }
+        main.container { flex-grow: 1; width: 90%; max-width: 1200px; margin: 20px auto; padding: 20px; background-color: #fff; box-shadow: 0 0 10px rgba(0,0,0,0.1); border-radius: 8px; }
+        footer { background: #333; color: #fff; text-align: center; padding: 1rem 0; margin-top: auto; width: 100%; }
+        nav ul li.dropdown { position: relative; display: inline-block; }
+        nav ul li.dropdown .dropbtn { cursor: default; }
+        nav ul li.dropdown .dropdown-content { display: none; position: absolute; background-color: #444; min-width: 160px; box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2); z-index: 101; left: 0; border-radius: 0 0 4px 4px; overflow: hidden; }
+        nav ul li.dropdown .dropdown-content a { color: white; padding: 10px 15px; text-decoration: none; display: block; text-align: left; white-space: nowrap; }
+        nav ul li.dropdown .dropdown-content a:hover { background-color: #555; }
+        nav ul li.dropdown:hover .dropdown-content { display: block; }
+        
+        h2 { color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 0; margin-bottom: 20px; }
+        /* 상세 데이터용 h3 스타일 추가 */
+        h3 { color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 30px; margin-bottom: 20px; }
+
+        .filters { background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin-bottom: 20px; display: flex; gap: 15px; align-items: center; flex-wrap: wrap; border: 1px solid #eee;}
+        .filters label { font-weight: bold; margin-right: 5px; color: #555; }
+        .filters input[type="text"], .filters select { padding: 8px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem; vertical-align: middle;}
+        .filters button { background-color: #5bc0de; color: white; padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer; transition: background-color 0.3s ease; }
+        .filters button:hover { background-color: #31b0d5; }
+        
+        .chart-container { position: relative; height: 40vh; width: 100%; margin-bottom: 30px; padding:10px; border: 1px solid #eee; border-radius: 5px; background-color: #fff; }
+        
+        .table-container { overflow-x: auto; margin-top: 10px; } /* 기준 파일과 맞춤 */
+        table { width: 100%; border-collapse: collapse; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        th, td { border: 1px solid #e0e0e0; padding: 8px 10px; text-align: left; vertical-align: middle; font-size: 0.85rem; white-space: nowrap;} /* 기준 파일과 맞춤 */
+        th { background-color: #f8f8f8; font-weight: bold; color: #333; font-size: 0.8rem; text-transform: none; } /* 기준 파일과 맞춤 */
+        tbody tr:nth-child(even) { background-color: #fdfdfd; }
+        tbody tr:hover { background-color: #f0f0f0; }
+        td.number-cell, th.number-cell { text-align: right; }
+        
+        .message-area { padding: 15px; margin-bottom: 20px; border-radius: 4px; border: 1px solid transparent; display: none; }
+        .message-area.error { background-color: #f2dede; color: #a94442; border-color: #ebccd1; }
+        .message-area.info { background-color: #d9edf7; color: #31708f; border-color: #bce8f1; }
+        .message-area.success { background-color: #dff0d8; color: #3c763d; border-color: #d6e9c6; }
+
+        /* --- 컬럼 표시 설정 관련 스타일 (기준 파일 참고하여 추가/수정) --- */
+        .detail-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .detail-header h3 {
+             margin-bottom: 0; 
+             border-bottom: none;
+             margin-top: 0; 
+        }
+        .table-controls {
+            position: relative;
+        }
+        .table-controls button.table-action-button {
+            font-size:0.8em; padding:5px 10px;
+            background-color: #5cb85c; color: white;
+            border:none; border-radius: 3px; cursor:pointer;
+            transition: background-color 0.3s ease;
+        }
+        .table-controls button.table-action-button:hover {
+            background-color: #4cae4c;
+        }
+
+        .column-toggle-popup {
+            display: none; 
+            position: absolute;
+            background-color: white;
+            border: 1px solid #ccc;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 15px;
+            z-index: 1050; 
+            max-height: 300px;
+            overflow-y: auto;
+            text-align: left;
+            border-radius: 4px;
+            min-width: 200px; /* 내용에 따라 조절 */
+        }
+        .column-toggle-popup label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 0.9em;
+            user-select: none;
+            cursor: pointer;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .column-toggle-popup input[type="checkbox"] {
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+        .column-toggle-popup button.popup-close-btn {
+            display:block;
+            width:100%;
+            margin-top:10px;
+            padding: 8px;
+            font-size:0.9em;
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        .column-toggle-popup button.popup-close-btn:hover {
+            background-color: #5a6268;
+        }
+        .flatpickr-calendar { z-index: 1051 !important; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>메랜통계</h1>
+    </header>
+
+    <nav>
+        <ul>
+            <li><a href="{{ url_for('home') }}" class="{{ 'active' if request.url.path == url_for('home') else '' }}">홈</a></li>
+            <li><a href="{{ url_for('list_and_add_hunting_sessions') }}" class="{{ 'active' if 'hunting-sessions' in request.url.path else '' }}">사냥</a></li>
+            <li><a href="{{ url_for('list_and_add_jjul_sessions') }}" class="{{ 'active' if 'jjul-sessions' in request.url.path else '' }}">쩔</a></li>
+            
+            <li class="dropdown">
+                <a href="javascript:void(0)" class="dropbtn {{ 'active' if request.url.path.startswith((url_for('statistics_experience_daily')|string).rsplit('/', 1)[0]) else '' }}">경험치 통계</a>
+                <div class="dropdown-content">
+                    <a href="{{ url_for('statistics_experience_daily') }}" class="{{ 'active' if request.url.path == url_for('statistics_experience_daily') else '' }}">일별 경험치</a>
+                    <a href="{{ url_for('statistics_experience_weekday') }}" class="{{ 'active' if request.url.path == url_for('statistics_experience_weekday') else '' }}">요일별 경험치</a>
+                    <a href="{{ url_for('statistics_experience_map') }}" class="{{ 'active' if request.url.path == url_for('statistics_experience_map') else '' }}">맵별 경험치</a>
+                    </div>
+            </li>
+
+            <li class="dropdown">
+                <a href="javascript:void(0)" class="dropbtn {{ 'active' if request.url.path.startswith((url_for('statistics_daily')|string).rsplit('/', 1)[0]) and not request.url.path.startswith((url_for('statistics_experience_daily')|string).rsplit('/', 1)[0]) else '' }}">메소 통계</a>
+                <div class="dropdown-content">
+                    <a href="{{ url_for('statistics_daily') }}" class="{{ 'active' if request.url.path == url_for('statistics_daily') else '' }}">일별 메소</a>
+                    <a href="{{ url_for('statistics_weekday') }}" class="{{ 'active' if request.url.path == url_for('statistics_weekday') else '' }}">요일별 메소</a>
+                    <a href="{{ url_for('statistics_map') }}" class="{{ 'active' if request.url.path == url_for('statistics_map') else '' }}">맵별 메소</a>
+                </div>
+            </li>
+            <li><a href="{{ url_for('list_and_add_meso_sales') }}" class="{{ 'active' if 'meso-sales' in request.url.path else '' }}">쌀먹 장부</a></li>
+            <li><a href="{{ url_for('info_page') }}" class="active">정보</a></li>
+        </ul>
+    </nav>
+    <main class="container">
+        <h2>요일별 경험치 통계</h2> <div id="messageAreaExpWeekday" class="message-area"></div> <div class="filters">
+            <label for="startDateExpWeekday">시작 날짜:</label> <input type="text" id="startDateExpWeekday" placeholder="날짜 선택..."> <label for="endDateExpWeekday">종료 날짜:</label> <input type="text" id="endDateExpWeekday" placeholder="날짜 선택..."> <button onclick="loadWeekdayExperienceStats()">조회</button> <label for="chartDataSelectExpWeekday" style="margin-left: auto;">차트 데이터:</label> <select id="chartDataSelectExpWeekday" onchange="renderWeekdayExperienceChart()"> <option value="average_exp_per_hour">시간당 평균 경험치</option>
+                <option value="total_gained_exp">총 획득 경험치</option>
+                <option value="session_count">사냥 세션 수</option>
+            </select>
+        </div>
+
+        <div class="chart-container">
+            <canvas id="expWeekdayChart"></canvas> </div>
+
+        <div class="detail-header"> <h3>상세 데이터</h3>
+            <div class="table-controls"> 
+                <button type="button" id="toggleExpWeekdayColumnsBtn" class="table-action-button">컬럼 표시 설정</button> <div id="expWeekdayColumnTogglePopup" class="column-toggle-popup"> </div>
+            </div>
+        </div>
+        <div class="table-container">
+            <table id="expWeekdayStatsTable"> <thead>
+                </thead>
+                <tbody id="expWeekdayStatsTableBody"> </tbody>
+            </table>
+        </div>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 김하늘 (의문의돌맹이). All rights reserved.</p>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://npmcdn.com/flatpickr/dist/l10n/ko.js"></script>
+    <script>
+        // Chart.js 전역 설정
+            Chart.defaults.font.family = "'Noto Sans KR', sans-serif";
+            Chart.defaults.font.size = 11;
+            Chart.defaults.color = '#a0a0a0';
+            Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.08)';
+
+        // --- DOM 요소 참조 ---
+        let startDatePickerExpWeekday = null;
+        let endDatePickerExpWeekday = null;
+        let expWeekdayChartInstance = null;
+        const messageAreaExpWeekday = document.getElementById('messageAreaExpWeekday');
+        const chartDataSelectExpWeekday = document.getElementById('chartDataSelectExpWeekday');
+        let currentExpWeekdayData = []; 
+        const orderedWeekdayNames = ["월요일", "화요일", "수요일", "목요일", "금요일", "토요일", "일요일"];
+
+
+        // --- 컬럼 토글 기능 요소 참조 ---
+        const toggleExpWeekdayColumnsBtn = document.getElementById('toggleExpWeekdayColumnsBtn');
+        const expWeekdayColumnTogglePopup = document.getElementById('expWeekdayColumnTogglePopup');
+        const expWeekdayStatsTable = document.getElementById('expWeekdayStatsTable');
+        const expWeekdayTableHead = expWeekdayStatsTable?.getElementsByTagName('thead')[0];
+        const expWeekdayStatsTableBody = document.getElementById('expWeekdayStatsTableBody');
+
+        const LS_EXP_WEEKDAY_COL_VISIBILITY_KEY = 'expWeekdayTableColumnVisibility_v1'; // 키 변경
+
+        // --- 테이블 컬럼 상세 정의 (요일별 경험치) ---
+        // 스키마 (가정): ExperienceWeekdaySummaryItem: weekday_name, total_gained_exp, total_duration_minutes, session_count, average_exp_per_hour
+        const expWeekdayTableColumns = [
+            { key: 'weekday_name', header: '요일', defaultVisible: true, type: 'string' },
+            { key: 'total_gained_exp', header: '총 획득 경험치', defaultVisible: true, type: 'number', class: 'number-cell' },
+            { key: 'total_duration_minutes', header: '총 사냥 시간(분)', defaultVisible: true, type: 'number', class: 'number-cell' },
+            { key: 'session_count', header: '사냥 세션 수', defaultVisible: true, type: 'number', class: 'number-cell' },
+            { key: 'average_exp_per_hour', header: '평균 시간당 경험치', defaultVisible: true, type: 'number', class: 'number-cell' }
+        ];
+
+        let expWeekdayColumnVisibility = {};
+
+        // --- LocalStorage 유틸리티 함수 ---
+        function loadColumnVisibility(key, columnsConfig) {
+            const saved = localStorage.getItem(key);
+            let visibility = {};
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    columnsConfig.forEach(col => {
+                        if (col.noToggle) { visibility[col.key] = true; }
+                        else if (parsed[col.key] === undefined) { visibility[col.key] = col.defaultVisible !== undefined ? col.defaultVisible : true; }
+                        else { visibility[col.key] = parsed[col.key]; }
+                    });
+                    return visibility;
+                } catch (e) { console.error("Failed to parse column visibility from localStorage:", e); }
+            }
+            columnsConfig.forEach(col => {
+                visibility[col.key] = col.defaultVisible !== undefined ? col.defaultVisible : true;
+            });
+            return visibility;
+        }
+
+        function saveColumnVisibility(key, visibilityConfig) {
+            localStorage.setItem(key, JSON.stringify(visibilityConfig));
+        }
+
+        // --- DOMContentLoaded ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const today = new Date();
+            const firstDayOfThisMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+
+            startDatePickerExpWeekday = flatpickr("#startDateExpWeekday", {
+                dateFormat: "Y-m-d", defaultDate: firstDayOfThisMonth, locale: "ko"
+            });
+            endDatePickerExpWeekday = flatpickr("#endDateExpWeekday", {
+                dateFormat: "Y-m-d", defaultDate: today, locale: "ko"
+            });
+            
+            expWeekdayColumnVisibility = loadColumnVisibility(LS_EXP_WEEKDAY_COL_VISIBILITY_KEY, expWeekdayTableColumns);
+            renderExpWeekdayTableHeaders(); 
+            setupColumnTogglePopupExpWeekday(); 
+
+            if (toggleExpWeekdayColumnsBtn) {
+                toggleExpWeekdayColumnsBtn.addEventListener('click', toggleColumnPopupExpWeekday); 
+            } else {
+                console.error("toggleExpWeekdayColumnsBtn not found!");
+            }
+            
+            loadWeekdayExperienceStats();
+        });
+
+        // --- 메시지 표시 함수 ---
+        function showMessageExpWeekday(message, type = 'info', duration = 0) {
+            if (!messageAreaExpWeekday) return;
+            messageAreaExpWeekday.textContent = message;
+            messageAreaExpWeekday.className = 'message-area ' + type;
+            messageAreaExpWeekday.style.display = message ? 'block' : 'none';
+            if (duration > 0) {
+                setTimeout(() => { 
+                    if (messageAreaExpWeekday.textContent === message) { // 메시지가 바뀌지 않았을 경우에만 숨김
+                        messageAreaExpWeekday.style.display = 'none'; 
+                    }
+                }, duration);
+            }
+        }
+
+        // --- 데이터 로딩 함수 ---
+        async function loadWeekdayExperienceStats() {
+            const startDate = startDatePickerExpWeekday.input.value;
+            const endDate = endDatePickerExpWeekday.input.value;
+
+            if (!startDate || !endDate) {
+                showMessageExpWeekday('시작 날짜와 종료 날짜를 모두 선택해주세요.', 'error', 3000); return;
+            }
+            if (new Date(startDate) > new Date(endDate)) {
+                showMessageExpWeekday('시작 날짜는 종료 날짜보다 이전이어야 합니다.', 'error', 3000); return;
+            }
+            
+            showMessageExpWeekday('요일별 경험치 데이터를 불러오는 중...', 'info');
+            const colspan = Object.values(expWeekdayColumnVisibility).filter(v => v).length || expWeekdayTableColumns.length;
+            
+            if (expWeekdayStatsTableBody) {
+                expWeekdayStatsTableBody.innerHTML = `<tr><td colspan="${colspan}" style="text-align:center;">데이터를 불러오는 중...</td></tr>`;
+            }
+            if (expWeekdayChartInstance) { expWeekdayChartInstance.destroy(); expWeekdayChartInstance = null; }
+
+            // API URL을 요일별 경험치 통계에 맞게 수정 (가정)
+            const apiUrl = `/api/statistics/experience/summary/weekday?start_date=${startDate}&end_date=${endDate}`;
+            
+            try {
+                const response = await fetch(apiUrl);
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ detail: '데이터 로드 실패 (서버 응답 파싱 불가)' }));
+                    throw new Error(errorData.detail || `서버 응답 오류: ${response.status}`);
+                }
+                const dataResponse = await response.json();
+                currentExpWeekdayData = dataResponse.summaries || [];
+
+                renderExpWeekdayTable(currentExpWeekdayData); 
+                renderWeekdayExperienceChart(); 
+                if (!currentExpWeekdayData || currentExpWeekdayData.length === 0) {
+                    showMessageExpWeekday('해당 기간의 요일별 경험치 데이터가 없습니다.', 'info', 3000);
+                } else {
+                    showMessageExpWeekday(''); 
+                }
+            } catch (error) {
+                showMessageExpWeekday(`오류: ${error.message}`, 'error', 5000);
+                if (expWeekdayStatsTableBody) {
+                    expWeekdayStatsTableBody.innerHTML = `<tr><td colspan="${colspan}" style="text-align:center; color: red;">데이터 로드 실패: ${error.message}</td></tr>`;
+                }
+                console.error('Error loading weekday experience statistics:', error);
+            }
+        }
+
+        // --- 테이블 렌더링 함수 ---
+        function renderExpWeekdayTable(summaries) {
+            if (!expWeekdayStatsTableBody) { 
+                console.error("expWeekdayStatsTableBody not found!"); return; 
+            }
+            expWeekdayStatsTableBody.innerHTML = ''; 
+
+            const visibleColumnCount = Object.values(expWeekdayColumnVisibility).filter(v => v).length;
+            const colspanCount = visibleColumnCount > 0 ? visibleColumnCount : expWeekdayTableColumns.length;
+
+            if (!summaries || summaries.length === 0) {
+                expWeekdayStatsTableBody.innerHTML = `<tr><td colspan="${colspanCount}" style="text-align:center;">데이터가 없습니다.</td></tr>`;
+                return;
+            }
+            
+            // 요일 순서대로 정렬
+            const sortedSummaries = [...summaries].sort((a, b) => 
+                orderedWeekdayNames.indexOf(a.weekday_name) - orderedWeekdayNames.indexOf(b.weekday_name)
+            );
+
+            sortedSummaries.forEach(item => {
+                const row = expWeekdayStatsTableBody.insertRow();
+                expWeekdayTableColumns.forEach(col => {
+                    if (expWeekdayColumnVisibility[col.key]) {
+                        const cell = row.insertCell();
+                        let cellValue = item[col.key]; 
+                        
+                        if (col.type === 'number') {
+                             cell.textContent = (cellValue !== null && cellValue !== undefined ? Number(cellValue) : 0).toLocaleString(undefined, {maximumFractionDigits: (col.key === 'average_exp_per_hour' ? 0 : 2)});
+                        } else { 
+                            cell.textContent = cellValue !== null && cellValue !== undefined ? String(cellValue) : 'N/A';
+                        }
+                        if (col.class) { 
+                            cell.classList.add(...col.class.split(' '));
+                        }
+                    }
+                });
+            });
+        }
+
+        // --- 차트 렌더링 함수 ---
+        function renderWeekdayExperienceChart() {
+            const canvas = document.getElementById('expWeekdayChart');
+            if(!canvas) { console.error("expWeekdayChart canvas not found"); return; }
+            const ctx = canvas.getContext('2d');
+
+            if (expWeekdayChartInstance) {
+                expWeekdayChartInstance.destroy();
+            }
+
+            if (!currentExpWeekdayData || currentExpWeekdayData.length === 0) {
+                ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+                ctx.font = "16px Arial"; ctx.fillStyle = "#888"; ctx.textAlign = "center";
+                ctx.fillText("차트에 표시할 데이터가 없습니다.", ctx.canvas.width / 2, ctx.canvas.height / 2);
+                return;
+            }
+
+            const selectedChartDataKey = chartDataSelectExpWeekday.value;
+            const selectedChartLabel = chartDataSelectExpWeekday.options[chartDataSelectExpWeekday.selectedIndex].text;
+            
+            // 요일 순서대로 정렬된 데이터 사용
+            const sortedDataForChart = [...currentExpWeekdayData].sort((a, b) => 
+                orderedWeekdayNames.indexOf(a.weekday_name) - orderedWeekdayNames.indexOf(b.weekday_name)
+            );
+
+            const labels = sortedDataForChart.map(item => item.weekday_name);
+            const dataPoints = sortedDataForChart.map(item => item[selectedChartDataKey] || 0);
+            
+            const barColors = [
+                'rgba(255, 99, 132, 0.6)', 'rgba(54, 162, 235, 0.6)', 'rgba(255, 206, 86, 0.6)', 
+                'rgba(75, 192, 192, 0.6)', 'rgba(153, 102, 255, 0.6)', 'rgba(255, 159, 64, 0.6)', 
+                'rgba(99, 255, 132, 0.6)'
+            ];
+            const borderColors = barColors.map(color => color.replace('0.6', '1'));
+
+
+            expWeekdayChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: selectedChartLabel,
+                        data: dataPoints,
+                        backgroundColor: labels.map((_,i) => barColors[i % barColors.length]),
+                        borderColor: labels.map((_,i) => borderColors[i % borderColors.length]),
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { 
+                            beginAtZero: true,
+                            ticks: { callback: function(value) { return value.toLocaleString(); } }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) { label += ': '; }
+                                    if (context.parsed.y !== null) {
+                                        label += context.parsed.y.toLocaleString(undefined, {maximumFractionDigits: (selectedChartDataKey === 'average_exp_per_hour' ? 0 : 2)});
+                                    }
+                                    return label;
+                                }
+                            }
+                        },
+                        legend: { display: true }
+                    }
+                }
+            });
+        }
+
+        // --- 컬럼 토글 관련 함수들 ---
+        function renderExpWeekdayTableHeaders() {
+            if (!expWeekdayTableHead) { console.error("expWeekdayTableHead not found!"); return; }
+            expWeekdayTableHead.innerHTML = ''; 
+            const headerRow = expWeekdayTableHead.insertRow();
+            expWeekdayTableColumns.forEach(col => {
+                if (expWeekdayColumnVisibility[col.key]) {
+                    const th = document.createElement('th');
+                    th.textContent = col.header;
+                    if (col.class) th.className = col.class;
+                    headerRow.appendChild(th);
+                }
+            });
+        }
+
+        function setupColumnTogglePopupExpWeekday() {
+            if (!expWeekdayColumnTogglePopup || !toggleExpWeekdayColumnsBtn) { return; }
+            expWeekdayColumnTogglePopup.innerHTML = ''; 
+
+            expWeekdayTableColumns.forEach(col => {
+                if (col.noToggle) return;
+                const checkboxId = `col-toggle-exp-weekday-${col.key}`;
+                const label = document.createElement('label');
+                label.htmlFor = checkboxId;
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox'; checkbox.id = checkboxId; checkbox.value = col.key;
+                checkbox.checked = !!expWeekdayColumnVisibility[col.key];
+                checkbox.addEventListener('change', function() {
+                    expWeekdayColumnVisibility[this.value] = this.checked;
+                    saveColumnVisibility(LS_EXP_WEEKDAY_COL_VISIBILITY_KEY, expWeekdayColumnVisibility);
+                    renderExpWeekdayTableHeaders();
+                    renderExpWeekdayTable(currentExpWeekdayData);
+                });
+                label.appendChild(checkbox);
+                label.appendChild(document.createTextNode(` ${col.header}`));
+                expWeekdayColumnTogglePopup.appendChild(label);
+            });
+
+            const closeButton = document.createElement('button');
+            closeButton.textContent = '닫기';
+            closeButton.classList.add('popup-close-btn');
+            closeButton.onclick = function() { toggleColumnPopupExpWeekday(); };
+            expWeekdayColumnTogglePopup.appendChild(closeButton);
+        }
+
+        function toggleColumnPopupExpWeekday() {
+            if (!expWeekdayColumnTogglePopup || !toggleExpWeekdayColumnsBtn) { return; }
+            const isVisible = expWeekdayColumnTogglePopup.style.display === 'block';
+            if (isVisible) {
+                expWeekdayColumnTogglePopup.style.display = 'none';
+            } else {
+                expWeekdayColumnTogglePopup.style.display = 'block';
+                const buttonRect = toggleExpWeekdayColumnsBtn.getBoundingClientRect();
+                const parentContainer = toggleExpWeekdayColumnsBtn.closest('.table-controls') || toggleExpWeekdayColumnsBtn.parentElement;
+                const containerRect = parentContainer.getBoundingClientRect();
+                let top = buttonRect.bottom - containerRect.top + 5; // Add a small gap
+                let left = buttonRect.left - containerRect.left;
+                expWeekdayColumnTogglePopup.style.top = top + 'px';
+                const popupWidth = expWeekdayColumnTogglePopup.offsetWidth;
+                if ((left + popupWidth) > parentContainer.offsetWidth) {
+                    left = Math.max(0, parentContainer.offsetWidth - popupWidth - 5); 
+                }
+                expWeekdayColumnTogglePopup.style.left = Math.max(0, left) + 'px';
+            }
+        }
+
+        document.addEventListener('click', function(event) {
+            if (expWeekdayColumnTogglePopup && expWeekdayColumnTogglePopup.style.display === 'block') {
+                if (!toggleExpWeekdayColumnsBtn?.contains(event.target) && !expWeekdayColumnTogglePopup.contains(event.target)) {
+                    expWeekdayColumnTogglePopup.style.display = 'none';
+                }
+            }
+        });
+    </script>
+</body>
+</html>

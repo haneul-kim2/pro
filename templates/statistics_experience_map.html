@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>맵별 경험치 요약</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <style>
+        /* 기본 스타일 */
+        body { font-family: 'Arial', sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; color: #333; display: flex; flex-direction: column; min-height: 100vh; }
+        header { background: #333; color: #fff; padding: 1.8rem 0; text-align: center; }
+        header h1 { margin: 0; font-size: 1.8rem; }
+        nav { background: #444; padding: 0.5rem 0; }
+        nav ul { padding: 0; list-style: none; text-align: center; margin: 0; }
+        nav ul li { display: inline-block; margin: 0 5px; }
+        nav ul li a { text-decoration: none; color: #fff; padding: 10px 15px; display: inline-block; border-radius: 4px; transition: background-color 0.3s ease; }
+        nav ul li a:hover, nav ul li a.active { background-color: #555; }
+        main.container { flex-grow: 1; width: 90%; max-width: 1200px; margin: 20px auto; padding: 20px; background-color: #fff; box-shadow: 0 0 10px rgba(0,0,0,0.1); border-radius: 8px; }
+        footer { background: #333; color: #fff; text-align: center; padding: 1rem 0; margin-top: auto; width: 100%; }
+        nav ul li.dropdown { position: relative; display: inline-block; }
+        nav ul li.dropdown .dropbtn { cursor: default; }
+        nav ul li.dropdown .dropdown-content { display: none; position: absolute; background-color: #444; min-width: 160px; box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2); z-index: 101; left: 0; border-radius: 0 0 4px 4px; overflow: hidden; }
+        nav ul li.dropdown .dropdown-content a { color: white; padding: 10px 15px; text-decoration: none; display: block; text-align: left; white-space: nowrap; }
+        nav ul li.dropdown .dropdown-content a:hover { background-color: #555; }
+        nav ul li.dropdown:hover .dropdown-content { display: block; }
+        
+        h2 { color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 0; margin-bottom: 20px; }
+        h3 { color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 30px; margin-bottom: 20px; }
+
+        .filters { background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin-bottom: 20px; display: flex; gap: 15px; align-items: center; flex-wrap: wrap; border: 1px solid #eee;}
+        .filters label { font-weight: bold; margin-right: 5px; color: #555; }
+        .filters input[type="text"], .filters select { padding: 8px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem; vertical-align: middle; }
+        .filters button { background-color: #5bc0de; color: white; padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer; transition: background-color 0.3s ease; font-size: 0.9rem;}
+        .filters button:hover { background-color: #31b0d5; }
+        
+        .chart-container { position: relative; height: 40vh; width: 100%; margin-bottom: 30px; padding:10px; border: 1px solid #eee; border-radius: 5px; background-color: #fff; }
+        
+        .table-container { overflow-x: auto; margin-top: 10px; }
+        table { width: 100%; border-collapse: collapse; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        th, td { border: 1px solid #e0e0e0; padding: 8px 10px; text-align: left; vertical-align: middle; font-size: 0.85rem; white-space: nowrap;}
+        th { background-color: #f8f8f8; font-weight: bold; color: #333; font-size: 0.8rem; text-transform: none; }
+        tbody tr:nth-child(even) { background-color: #fdfdfd; }
+        tbody tr:hover { background-color: #f0f0f0; }
+        td.number-cell, th.number-cell { text-align: right; }
+        
+        .message-area { padding: 15px; margin-bottom: 20px; border-radius: 4px; border: 1px solid transparent; display: none; }
+        .message-area.error { background-color: #f2dede; color: #a94442; border-color: #ebccd1; }
+        .message-area.info { background-color: #d9edf7; color: #31708f; border-color: #bce8f1; }
+        .message-area.success { background-color: #dff0d8; color: #3c763d; border-color: #d6e9c6; }
+
+        .detail-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .detail-header h3 { margin-bottom: 0; border-bottom: none; margin-top: 0; }
+        .table-controls { position: relative; }
+        .table-action-button {
+            font-size:0.8em; padding:5px 10px; background-color: #5cb85c; color: white;
+            border:none; border-radius: 3px; cursor:pointer; transition: background-color 0.3s ease;
+        }
+        .table-action-button:hover { background-color: #4cae4c; }
+
+        .column-toggle-popup {
+            display: none; position: absolute; background-color: white; border: 1px solid #ccc;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1); padding: 15px; z-index: 1050; 
+            max-height: 300px; overflow-y: auto; text-align: left; border-radius: 4px;
+            min-width: 220px; 
+        }
+        .column-toggle-popup label {
+            display: block; margin-bottom: 8px; font-size: 0.9em; user-select: none;
+            cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .column-toggle-popup input[type="checkbox"] { margin-right: 8px; vertical-align: middle; }
+        .column-toggle-popup button.popup-close-btn {
+            display:block; width:100%; margin-top:10px; padding: 8px; font-size:0.9em;
+            background-color: #6c757d; color: white; border: none; border-radius: 3px; cursor: pointer;
+        }
+        .column-toggle-popup button.popup-close-btn:hover { background-color: #5a6268; }
+        .flatpickr-calendar { z-index: 1051 !important; }
+    </style>
+</head>
+<body>
+    <header><h1>메랜통계</h1></header>
+       <nav>
+        <ul>
+            <li><a href="{{ url_for('home') }}" class="{{ 'active' if request.url.path == url_for('home') else '' }}">홈</a></li>
+            <li><a href="{{ url_for('list_and_add_hunting_sessions') }}" class="{{ 'active' if 'hunting-sessions' in request.url.path else '' }}">사냥</a></li>
+            <li><a href="{{ url_for('list_and_add_jjul_sessions') }}" class="{{ 'active' if 'jjul-sessions' in request.url.path else '' }}">쩔</a></li>
+            
+            <li class="dropdown">
+                <a href="javascript:void(0)" class="dropbtn {{ 'active' if request.url.path.startswith((url_for('statistics_experience_daily')|string).rsplit('/', 1)[0]) else '' }}">경험치 통계</a>
+                <div class="dropdown-content">
+                    <a href="{{ url_for('statistics_experience_daily') }}" class="{{ 'active' if request.url.path == url_for('statistics_experience_daily') else '' }}">일별 경험치</a>
+                    <a href="{{ url_for('statistics_experience_weekday') }}" class="{{ 'active' if request.url.path == url_for('statistics_experience_weekday') else '' }}">요일별 경험치</a>
+                    <a href="{{ url_for('statistics_experience_map') }}" class="{{ 'active' if request.url.path == url_for('statistics_experience_map') else '' }}">맵별 경험치</a>
+                    </div>
+            </li>
+
+            <li class="dropdown">
+                <a href="javascript:void(0)" class="dropbtn {{ 'active' if request.url.path.startswith((url_for('statistics_daily')|string).rsplit('/', 1)[0]) and not request.url.path.startswith((url_for('statistics_experience_daily')|string).rsplit('/', 1)[0]) else '' }}">메소 통계</a>
+                <div class="dropdown-content">
+                    <a href="{{ url_for('statistics_daily') }}" class="{{ 'active' if request.url.path == url_for('statistics_daily') else '' }}">일별 메소</a>
+                    <a href="{{ url_for('statistics_weekday') }}" class="{{ 'active' if request.url.path == url_for('statistics_weekday') else '' }}">요일별 메소</a>
+                    <a href="{{ url_for('statistics_map') }}" class="{{ 'active' if request.url.path == url_for('statistics_map') else '' }}">맵별 메소</a>
+                </div>
+            </li>
+            <li><a href="{{ url_for('list_and_add_meso_sales') }}" class="{{ 'active' if 'meso-sales' in request.url.path else '' }}">쌀먹 장부</a></li>
+            <li><a href="{{ url_for('info_page') }}" class="active">정보</a></li>
+        </ul>
+    </nav>
+
+    <main class="container">
+        <h2>맵별 경험치 요약</h2>
+        <div id="messageAreaExpMap" class="message-area"></div>
+        <div class="filters">
+            <label for="startDateExpMap">시작 날짜:</label>
+            <input type="text" id="startDateExpMap" placeholder="날짜 선택...">
+            <label for="endDateExpMap">종료 날짜:</label>
+            <input type="text" id="endDateExpMap" placeholder="날짜 선택...">
+            <button onclick="loadMapExperienceStats()">조회</button>
+            <label for="chartDataSelectExpMap" style="margin-left: auto;">차트 데이터:</label>
+            <select id="chartDataSelectExpMap" onchange="renderMapExperienceChart()">
+                <option value="average_exp_per_hour">시간당 평균 경험치</option>
+                <option value="total_gained_exp">총 획득 경험치</option>
+                <option value="session_count">사냥 세션 수</option>
+            </select>
+        </div>
+
+        <div class="chart-container">
+            <canvas id="mapExpChart"></canvas>
+        </div>
+
+        <div class="detail-header">
+            <h3>상세 데이터</h3>
+            <div class="table-controls"> 
+                <button type="button" id="toggleExpMapColumnsBtn" class="table-action-button">컬럼 표시 설정</button>
+                <div id="expMapColumnTogglePopup" class="column-toggle-popup"></div>
+            </div>
+        </div>
+        <div class="table-container">
+            <table id="mapExpStatsTable">
+                <thead></thead>
+                <tbody id="mapExpStatsTableBody"></tbody>
+            </table>
+        </div>
+    </main>
+
+    <footer><p>&copy; 2025 김하늘 (의문의돌맹이). All rights reserved.</p></footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://npmcdn.com/flatpickr/dist/l10n/ko.js"></script>
+    <script>
+        Chart.defaults.font.family = "'Noto Sans KR', sans-serif";
+        Chart.defaults.font.size = 11; 
+        Chart.defaults.color = '#a0a0a0'; 
+        Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.08)'; 
+   
+        let startDatePickerExpMap = null;
+        let endDatePickerExpMap = null;
+        let mapExpChartInstance = null;
+        const messageAreaExpMap = document.getElementById('messageAreaExpMap');
+        const chartDataSelectExpMap = document.getElementById('chartDataSelectExpMap');
+        let currentMapExpData = []; 
+
+        const toggleExpMapColumnsBtn = document.getElementById('toggleExpMapColumnsBtn');
+        const expMapColumnTogglePopup = document.getElementById('expMapColumnTogglePopup');
+        const expMapStatsTable = document.getElementById('mapExpStatsTable'); 
+        const expMapTableHead = expMapStatsTable?.getElementsByTagName('thead')[0]; 
+        const mapExpStatsTableBody = document.getElementById('mapExpStatsTableBody'); 
+
+        const LS_EXP_MAP_COL_VISIBILITY_KEY = 'expMapTableColumnVisibility_v1';
+
+        const expMapTableColumns = [
+            { key: 'map_name', header: '맵 이름', defaultVisible: true, type: 'string' },
+            { key: 'total_gained_exp', header: '총 획득 경험치', defaultVisible: true, type: 'number', class: 'number-cell' },
+            { key: 'total_duration_minutes', header: '총 사냥 시간(분)', defaultVisible: true, type: 'number', class: 'number-cell' },
+            { key: 'session_count', header: '사냥 세션 수', defaultVisible: true, type: 'number', class: 'number-cell' },
+            { key: 'average_exp_per_hour', header: '평균 시간당 경험치', defaultVisible: true, type: 'number', class: 'number-cell' }
+        ];
+        let expMapColumnVisibility = {};
+
+        function loadColumnVisibility(key, columnsConfig) {
+            const savedVisibility = localStorage.getItem(key);
+            let visibility = {};
+            if (savedVisibility) {
+                try { 
+                    const parsed = JSON.parse(savedVisibility);
+                    columnsConfig.forEach(col => {
+                        if (col.noToggle) { visibility[col.key] = true; }
+                        else if (parsed[col.key] === undefined) { visibility[col.key] = col.defaultVisible !== undefined ? col.defaultVisible : true; }
+                        else { visibility[col.key] = parsed[col.key]; }
+                    });
+                    return visibility;
+                } catch(e) { console.error("Error parsing column visibility from LS for " + key, e); }
+            }
+            columnsConfig.forEach(col => {
+                if (!col.noToggle) {
+                    visibility[col.key] = col.defaultVisible !== undefined ? col.defaultVisible : true;
+                } else {
+                    visibility[col.key] = true; 
+                }
+            });
+            return visibility;
+        }
+
+        function saveColumnVisibility(key, visibilityConfig) {
+            localStorage.setItem(key, JSON.stringify(visibilityConfig));
+        }
+ 
+        document.addEventListener('DOMContentLoaded', () => {
+            const today = new Date();
+            const firstDayOfThisMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+
+            startDatePickerExpMap = flatpickr("#startDateExpMap", {
+                dateFormat: "Y-m-d", defaultDate: firstDayOfThisMonth, locale: "ko"
+            });
+            endDatePickerExpMap = flatpickr("#endDateExpMap", {
+                dateFormat: "Y-m-d", defaultDate: today, locale: "ko"
+            });
+            
+            expMapColumnVisibility = loadColumnVisibility(LS_EXP_MAP_COL_VISIBILITY_KEY, expMapTableColumns);
+            renderExpMapTableHeaders(); 
+            setupColumnTogglePopupExpMap(); 
+
+            if (toggleExpMapColumnsBtn) {
+                toggleExpMapColumnsBtn.addEventListener('click', toggleColumnPopupExpMap); 
+            } else {
+                console.error("toggleExpMapColumnsBtn not found!");
+            }
+            
+            // 초기 테이블 본문 메시지 설정
+            if (mapExpStatsTableBody) {
+                 const initialColspan = Object.values(expMapColumnVisibility).filter(v => v).length || expMapTableColumns.length || 1;
+                 mapExpStatsTableBody.innerHTML = `<tr><td colspan="${initialColspan}" style="text-align:center;">데이터를 조회해주세요.</td></tr>`;
+            }
+            loadMapExperienceStats(); 
+        });
+
+        function showMessageExpMap(message, type = 'info', duration = 0) {
+            if (!messageAreaExpMap) return;
+            messageAreaExpMap.textContent = message;
+            messageAreaExpMap.className = 'message-area ' + type;
+            messageAreaExpMap.style.display = message ? 'block' : 'none';
+            if (duration > 0) {
+                setTimeout(() => { 
+                    if (messageAreaExpMap.textContent === message && messageAreaExpMap.style.display === 'block') {
+                         messageAreaExpMap.style.display = 'none'; 
+                    }
+                }, duration);
+            }
+        }
+
+        async function loadMapExperienceStats() {
+            const startDate = startDatePickerExpMap.input.value;
+            const endDate = endDatePickerExpMap.input.value;
+
+            if (!startDate || !endDate) {
+                showMessageExpMap('시작 날짜와 종료 날짜를 모두 선택해주세요.', 'error', 3000); return;
+            }
+            if (new Date(startDate) > new Date(endDate)) {
+                showMessageExpMap('시작 날짜는 종료 날짜보다 이전이어야 합니다.', 'error', 3000); return;
+            }
+            
+            showMessageExpMap('맵별 경험치 데이터를 불러오는 중...', 'info');
+            const colspan = Object.values(expMapColumnVisibility).filter(v => v).length || expMapTableColumns.length || 1;
+            
+            if (mapExpStatsTableBody) { 
+                mapExpStatsTableBody.innerHTML = `<tr><td colspan="${colspan}" style="text-align:center;">데이터를 불러오는 중...</td></tr>`;
+            }
+            if (mapExpChartInstance) { mapExpChartInstance.destroy(); mapExpChartInstance = null; }
+
+            const apiUrl = `/api/statistics/experience/summary/map?start_date=${startDate}&end_date=${endDate}`;
+            
+            try {
+                const response = await fetch(apiUrl);
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ detail: '데이터 로드 실패 (서버 응답 파싱 불가)' }));
+                    throw new Error(errorData.detail || `서버 응답 오류: ${response.status}`);
+                }
+                const dataResponse = await response.json();
+                currentMapExpData = dataResponse.summaries || []; 
+
+                renderExpMapTableHeaders(); 
+                renderMapExperienceTable(currentMapExpData); 
+                renderMapExperienceChart(); 
+                if (!currentMapExpData || currentMapExpData.length === 0) {
+                    showMessageExpMap('해당 기간의 맵별 경험치 데이터가 없습니다.', 'info', 3000);
+                } else {
+                    showMessageExpMap(''); 
+                }
+            } catch (error) {
+                showMessageExpMap(`오류: ${error.message}`, 'error', 5000);
+                const errorColspan = Object.values(expMapColumnVisibility).filter(v => v).length || expMapTableColumns.length || 1;
+                if (mapExpStatsTableBody) { 
+                    mapExpStatsTableBody.innerHTML = `<tr><td colspan="${errorColspan}" style="text-align:center; color: red;">데이터 로드 실패: ${error.message}</td></tr>`;
+                }
+                console.error('Error loading map experience statistics:', error);
+            }
+        }
+
+        function renderMapExperienceTable(summaries) {
+            if (!mapExpStatsTableBody) { 
+                console.error("mapExpStatsTableBody not found!"); return; 
+            }
+            mapExpStatsTableBody.innerHTML = ''; 
+
+            const visibleColumnCount = Object.values(expMapColumnVisibility).filter(v => v).length;
+            const colspanCount = visibleColumnCount > 0 ? visibleColumnCount : expMapTableColumns.length || 1;
+
+            if (!summaries || summaries.length === 0) {
+                mapExpStatsTableBody.innerHTML = `<tr><td colspan="${colspanCount}" style="text-align:center;">데이터가 없습니다.</td></tr>`;
+                return;
+            }
+            
+            const sortedSummaries = [...summaries].sort((a,b) => (a.map_name || "").localeCompare(b.map_name || ""));
+
+            sortedSummaries.forEach(item => {
+                const row = mapExpStatsTableBody.insertRow();
+                expMapTableColumns.forEach(col => {
+                    if (expMapColumnVisibility[col.key]) {
+                        const cell = row.insertCell();
+                        let cellValue = item[col.key]; 
+                        
+                        if (col.type === 'number') {
+                             cell.textContent = (cellValue !== null && cellValue !== undefined ? Number(cellValue) : 0).toLocaleString(undefined, {maximumFractionDigits: (col.key === 'average_exp_per_hour' ? 0 : 2)});
+                        } else { 
+                            cell.textContent = cellValue !== null && cellValue !== undefined ? String(cellValue) : 'N/A';
+                        }
+                        if (col.class) { 
+                            cell.classList.add(...col.class.split(' '));
+                        }
+                    }
+                });
+            });
+        }
+
+        function renderMapExperienceChart() {
+            const canvas = document.getElementById('mapExpChart');
+            if(!canvas) {console.error("mapExpChart canvas not found"); return;}
+            const ctx = canvas.getContext('2d');
+            
+            if (mapExpChartInstance) {
+                mapExpChartInstance.destroy();
+                mapExpChartInstance = null; // Ensure it's reset
+            }
+
+            if (!currentMapExpData || currentMapExpData.length === 0) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height); // Use canvas.width/height
+                ctx.font = "16px Arial"; ctx.fillStyle = "#888"; ctx.textAlign = "center";
+                ctx.fillText("차트에 표시할 데이터가 없습니다.", canvas.width / 2, canvas.height / 2);
+                return;
+            }
+
+            const selectedChartDataKey = chartDataSelectExpMap.value;
+            const selectedChartLabel = chartDataSelectExpMap.options[chartDataSelectExpMap.selectedIndex].text;
+            
+            const sortedDataForChart = [...currentMapExpData]
+                .sort((a, b) => (b[selectedChartDataKey] || 0) - (a[selectedChartDataKey] || 0)) // Sort by selected data for better viz
+                .slice(0, 15); 
+
+            const labels = sortedDataForChart.map(item => item.map_name);
+            const dataPoints = sortedDataForChart.map(item => item[selectedChartDataKey] || 0);
+            
+            const baseColors = [ 
+                'rgba(255, 99, 132, 0.7)', 'rgba(54, 162, 235, 0.7)', 'rgba(255, 206, 86, 0.7)', 
+                'rgba(75, 192, 192, 0.7)', 'rgba(153, 102, 255, 0.7)', 'rgba(255, 159, 64, 0.7)',
+                'rgba(255, 99, 255, 0.7)', 'rgba(99, 255, 132, 0.7)', 'rgba(99, 132, 255, 0.7)',
+                'rgba(210, 105, 30, 0.7)', 'rgba(128, 0, 128, 0.7)', 'rgba(0, 128, 128, 0.7)',
+                'rgba(255, 0, 0, 0.7)', 'rgba(0, 255, 0, 0.7)', 'rgba(0, 0, 255, 0.7)'
+            ];
+            const chartColors = labels.map((_, i) => baseColors[i % baseColors.length]);
+
+            mapExpChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: selectedChartLabel, data: dataPoints,
+                        backgroundColor: chartColors,
+                        borderColor: chartColors.map(color => color.replace('0.7', '1')),
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+                    scales: {
+                        x: { 
+                            beginAtZero: true,
+                            ticks: { callback: function(value) { return value.toLocaleString(); } }
+                        },
+                        y: { ticks: { autoSkip: false } }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) { label += ': '; }
+                                    if (context.parsed.x !== null) {
+                                        label += Number(context.parsed.x).toLocaleString(undefined, {maximumFractionDigits: (selectedChartDataKey === 'average_exp_per_hour' ? 0 : 2)});
+                                    }
+                                    return label;
+                                }
+                            }
+                        },
+                        legend: { display: true }
+                    }
+                }
+            });
+        }
+
+        function renderExpMapTableHeaders() {
+            if (!expMapTableHead) { console.error("expMapTableHead not found!"); return; }
+            expMapTableHead.innerHTML = ''; 
+            const headerRow = expMapTableHead.insertRow();
+            expMapTableColumns.forEach(col => {
+                if (expMapColumnVisibility[col.key]) {
+                    const th = document.createElement('th');
+                    th.textContent = col.header;
+                    if (col.class) th.className = col.class;
+                    headerRow.appendChild(th);
+                }
+            });
+        }
+
+        function setupColumnTogglePopupExpMap() {
+            if (!expMapColumnTogglePopup || !toggleExpMapColumnsBtn) { return; }
+            expMapColumnTogglePopup.innerHTML = ''; 
+
+            expMapTableColumns.forEach(col => {
+                if (col.noToggle) return;
+                const checkboxId = `col-toggle-exp-map-${col.key}`;
+                const label = document.createElement('label');
+                label.htmlFor = checkboxId;
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox'; checkbox.id = checkboxId; checkbox.value = col.key;
+                checkbox.checked = !!expMapColumnVisibility[col.key];
+                checkbox.addEventListener('change', function() {
+                    expMapColumnVisibility[this.value] = this.checked;
+                    saveColumnVisibility(LS_EXP_MAP_COL_VISIBILITY_KEY, expMapColumnVisibility);
+                    renderExpMapTableHeaders();
+                    renderMapExperienceTable(currentMapExpData);
+                });
+                label.appendChild(checkbox);
+                label.appendChild(document.createTextNode(` ${col.header}`));
+                expMapColumnTogglePopup.appendChild(label);
+            });
+
+            const closeButton = document.createElement('button');
+            closeButton.textContent = '닫기';
+            closeButton.classList.add('popup-close-btn');
+            closeButton.onclick = function() { toggleColumnPopupExpMap(); };
+            expMapColumnTogglePopup.appendChild(closeButton);
+        }
+
+        function toggleColumnPopupExpMap() {
+            if (!expMapColumnTogglePopup || !toggleExpMapColumnsBtn) { return; }
+            const isVisible = expMapColumnTogglePopup.style.display === 'block';
+            if (isVisible) {
+                expMapColumnTogglePopup.style.display = 'none';
+            } else {
+                expMapColumnTogglePopup.style.display = 'block'; // 먼저 보이게 설정해야 offsetWidth 등이 정확
+                const buttonRect = toggleExpMapColumnsBtn.getBoundingClientRect();
+                const parentContainer = toggleExpMapColumnsBtn.closest('.table-controls');
+                if (!parentContainer) { // Fallback if .table-controls is not found
+                    console.warn("'.table-controls' not found for popup positioning. Using button's parent.");
+                    const directParent = toggleExpMapColumnsBtn.parentElement;
+                    const parentRect = directParent.getBoundingClientRect();
+                    expMapColumnTogglePopup.style.top = (buttonRect.bottom - parentRect.top + 5) + 'px';
+                    expMapColumnTogglePopup.style.left = Math.max(0, (buttonRect.left - parentRect.left)) + 'px';
+                    return;
+                }
+                const containerRect = parentContainer.getBoundingClientRect();
+                
+                let top = buttonRect.bottom - containerRect.top + 5;
+                let left = buttonRect.left - containerRect.left;
+                const popupWidth = expMapColumnTogglePopup.offsetWidth;
+                const containerWidth = parentContainer.offsetWidth;
+
+                // 만약 팝업이 오른쪽으로 넘치면, 버튼의 오른쪽에 팝업의 오른쪽을 맞추려고 시도
+                if (left + popupWidth > containerWidth) {
+                    left = buttonRect.right - containerRect.left - popupWidth;
+                }
+                // 그래도 왼쪽으로 넘치거나 (버튼이 매우 왼쪽에 있고 팝업이 넓은 경우)
+                // 또는 오른쪽 정렬 시도 후에도 여전히 오른쪽으로 넘치는 경우 (컨테이너가 매우 좁은 경우)
+                // 컨테이너 오른쪽에 맞춤 (약간의 여유공간)
+                if (left < 0 || left + popupWidth > containerWidth) {
+                     left = containerWidth - popupWidth -5;
+                }
+                 left = Math.max(0, left); // 최종적으로 컨테이너 왼쪽을 넘지 않도록
+
+                expMapColumnTogglePopup.style.top = top + 'px';
+                expMapColumnTogglePopup.style.left = left + 'px';
+            }
+        }
+
+        document.addEventListener('click', function(event) {
+            if (expMapColumnTogglePopup && expMapColumnTogglePopup.style.display === 'block') {
+                if (!toggleExpMapColumnsBtn?.contains(event.target) && !expMapColumnTogglePopup.contains(event.target)) {
+                    expMapColumnTogglePopup.style.display = 'none';
+                }
+            }
+        });
+    </script>
+</body>
+</html>

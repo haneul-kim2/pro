@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>쌀먹 장부</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <style>
+        /* 기본 스타일 (다른 페이지와 유사, 필요시 style.css로 통합) */
+        body { font-family: 'Arial', sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; color: #333; display: flex; flex-direction: column; min-height: 100vh; }
+        header { background: #333; color: #fff; padding: 1.8rem 0; text-align: center; }
+        header h1 { margin: 0; font-size: 1.8rem; }
+        nav { background: #444; padding: 0.5rem 0; }
+        nav ul { padding: 0; list-style: none; text-align: center; margin: 0; }
+        nav ul li { display: inline-block; margin: 0 5px; }
+        nav ul li a { text-decoration: none; color: #fff; padding: 10px 15px; display: inline-block; border-radius: 4px; transition: background-color 0.3s ease; }
+        nav ul li a:hover, nav ul li a.active { background-color: #555; }
+        main.container { flex-grow: 1; width: 90%; max-width: 900px; margin: 20px auto; padding: 20px; background-color: #fff; box-shadow: 0 0 10px rgba(0,0,0,0.1); border-radius: 8px; }
+        footer { background: #333; color: #fff; text-align: center; padding: 1rem 0; margin-top: auto; width: 100%; }
+        nav ul li.dropdown { position: relative; display: inline-block; }
+        nav ul li.dropdown .dropbtn { cursor: default; }
+        nav ul li.dropdown .dropdown-content { display: none; position: absolute; background-color: #444; min-width: 120px; box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2); z-index: 1; left: 0; border-radius: 0 0 4px 4px; overflow: hidden; }
+        nav ul li.dropdown .dropdown-content a { color: white; padding: 10px 15px; text-decoration: none; display: block; text-align: left; white-space: nowrap; }
+        nav ul li.dropdown .dropdown-content a:hover { background-color: #555; }
+        nav ul li.dropdown:hover .dropdown-content { display: block; }
+        h2, h3 { color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 30px; margin-bottom: 20px; }
+        h2:first-of-type { margin-top: 0; }
+        .form-section { margin-bottom: 30px; padding: 20px; background-color: #f9f9f9; border-radius: 5px; border: 1px solid #eee; }
+        .form-grid { display: grid; grid-template-columns: 1fr; gap: 15px; }
+        @media (min-width: 600px) { .form-grid { grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); } }
+        .form-group { margin-bottom: 0; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: bold; color: #555; font-size: 0.9rem;}
+        .form-group input[type="text"], .form-group input[type="date"], .form-group input[type="number"] { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 0.95rem; }
+        .form-group input:focus { border-color: #5cb85c; outline: none; box-shadow: 0 0 5px rgba(92, 184, 92, 0.5); }
+        .calculated-value { font-size: 1.1rem; font-weight: bold; color: #28a745; margin-top: 5px; padding: 10px; background-color: #e9ecef; border-radius: 4px;} /* 총 판매액 스타일 개선 */
+        .button-group { margin-top: 30px; text-align: right; padding-top: 20px; border-top: 1px solid #eee; }
+        button[type="submit"] { background-color: #5cb85c; color:white; padding: 10px 15px; border:none; border-radius:4px; cursor:pointer; font-size:1rem; }
+        button[type="submit"]:hover { background-color: #4cae4c; }
+        button.secondary { background-color: #f0ad4e; color:white; padding: 10px 15px; border:none; border-radius:4px; cursor:pointer; font-size:1rem; margin-left: 10px; }
+        button.secondary:hover { background-color: #ec971f; }
+        .message-area { padding: 15px; margin-bottom: 20px; border-radius: 4px; border: 1px solid transparent; }
+        .message-area.success { background-color: #dff0d8; color: #3c763d; border-color: #d6e9c6; }
+        .message-area.error { background-color: #f2dede; color: #a94442; border-color: #ebccd1; }
+        .message-area.info { background-color: #d9edf7; color: #31708f; border-color: #bce8f1; }
+        .message-area:empty { display: none; }
+        .table-container { overflow-x: auto; /* margin-top 제거 또는 조정 */ }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        th, td { border: 1px solid #e0e0e0; padding: 10px 12px; text-align: left; vertical-align: middle; font-size: 0.9rem; }
+        th { background-color: #f8f8f8; font-weight: bold; color: #333; text-transform: uppercase; font-size: 0.85rem; }
+        tbody tr:nth-child(even) { background-color: #fdfdfd; }
+        tbody tr:hover { background-color: #f0f0f0; }
+        td { color: #555; }
+        td:nth-child(2), td:nth-child(3), td:nth-child(4) { text-align: right; } /* 가격, 판매량, 총판매액 오른쪽 정렬 */
+        /* 삭제 버튼 스타일 */
+        .remove-item-btn { background-color: #d9534f; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 0.85em; }
+        .remove-item-btn:hover { background-color: #c9302c; }
+        .action-button { /* 모든 기록 삭제 버튼에도 적용될 수 있도록 */
+            background-color: #d9534f; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 0.85em;
+        }
+        .action-button:hover { background-color: #c9302c; }
+        .table-controls { /* "모든 기록 삭제" 버튼을 감싸는 div에 적용 */
+            text-align: right;
+            margin-bottom: 10px; /* 테이블과의 간격 */
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>메랜통계</h1>
+    </header>
+
+    <nav>
+        <ul>
+            <li><a href="{{ url_for('home') }}" class="{{ 'active' if request.url.path == url_for('home') else '' }}">홈</a></li>
+            <li><a href="{{ url_for('list_and_add_hunting_sessions') }}" class="{{ 'active' if 'hunting-sessions' in request.url.path else '' }}">사냥</a></li>
+            <li><a href="{{ url_for('list_and_add_jjul_sessions') }}" class="{{ 'active' if 'jjul-sessions' in request.url.path else '' }}">쩔</a></li>
+            
+            <li class="dropdown">
+                <a href="javascript:void(0)" class="dropbtn {{ 'active' if request.url.path.startswith((url_for('statistics_experience_daily')|string).rsplit('/', 1)[0]) else '' }}">경험치 통계</a>
+                <div class="dropdown-content">
+                    <a href="{{ url_for('statistics_experience_daily') }}" class="{{ 'active' if request.url.path == url_for('statistics_experience_daily') else '' }}">일별 경험치</a>
+                    <a href="{{ url_for('statistics_experience_weekday') }}" class="{{ 'active' if request.url.path == url_for('statistics_experience_weekday') else '' }}">요일별 경험치</a>
+                    <a href="{{ url_for('statistics_experience_map') }}" class="{{ 'active' if request.url.path == url_for('statistics_experience_map') else '' }}">맵별 경험치</a>
+                    </div>
+            </li>
+
+            <li class="dropdown">
+                <a href="javascript:void(0)" class="dropbtn {{ 'active' if request.url.path.startswith((url_for('statistics_daily')|string).rsplit('/', 1)[0]) and not request.url.path.startswith((url_for('statistics_experience_daily')|string).rsplit('/', 1)[0]) else '' }}">메소 통계</a>
+                <div class="dropdown-content">
+                    <a href="{{ url_for('statistics_daily') }}" class="{{ 'active' if request.url.path == url_for('statistics_daily') else '' }}">일별 메소</a>
+                    <a href="{{ url_for('statistics_weekday') }}" class="{{ 'active' if request.url.path == url_for('statistics_weekday') else '' }}">요일별 메소</a>
+                    <a href="{{ url_for('statistics_map') }}" class="{{ 'active' if request.url.path == url_for('statistics_map') else '' }}">맵별 메소</a>
+                </div>
+            </li>
+            <li><a href="{{ url_for('list_and_add_meso_sales') }}" class="{{ 'active' if 'meso-sales' in request.url.path else '' }}">쌀먹 장부</a></li>
+            <li><a href="{{ url_for('info_page') }}" class="active">정보</a></li>
+        </ul>
+    </nav>
+
+    <main class="container">
+        <h2>쌀먹 장부</h2>
+        <div id="message-area-meso" class="message-area"></div>
+        <form id="mesoSaleForm">
+            <div class="form-section">
+                <h3>판매 정보 입력</h3>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="sale_date_flatpickr">판매 날짜:</label>
+                        <input type="text" id="sale_date_flatpickr" name="sale_date" required placeholder="날짜를 선택하세요...">
+                    </div>
+                    <div class="form-group">
+                        <label for="price_per_1m_meso">100만 메소당 가격 (원):</label>
+                        <input type="number" id="price_per_1m_meso" name="price_per_1m_meso" value="0" min="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="quantity_sold_in_1m_units">판매량 (단위: 100만 메소):</label>
+                        <input type="number" id="quantity_sold_in_1m_units" name="quantity_sold_in_1m_units" value="0" step="0.01" min="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label>총 판매액 (원):</label>
+                        <div id="total_sale_amount_krw_display" class="calculated-value">0 원</div>
+                    </div>
+                </div>
+            </div>
+            <div class="button-group"> <!-- 폼 내부 버튼 그룹 -->
+                <button type="submit">판매 기록 추가</button>
+                <button type="button" onclick="resetMesoSaleForm()" class="secondary">양식 초기화</button>
+            </div>
+        </form>
+
+        <!-- "메소 판매 목록" 제목 -->
+        <h3>메소 판매 목록</h3>
+
+        <!-- "모든 기록 삭제" 버튼을 목록 제목 아래, 테이블 바로 위로 이동 -->
+        <div class="table-controls">
+            <button type="button" id="deleteAllMesoSalesBtn" class="action-button">모든 기록 삭제</button>
+        </div>
+
+        <div class="table-container">
+            <table id="mesoSalesTable">
+                <thead>
+                    <tr>
+                        <th>판매 날짜</th>
+                        <th>100만당 가격(원)</th>
+                        <th>판매량(100만)</th>
+                        <th>총 판매액(원)</th>
+                        <th>기록 시간</th>
+                        <th>작업</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td colspan="6" style="text-align:center;">목록을 불러오는 중...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <footer>
+        <p>© 2025 김하늘 (의문의돌맹이). All rights reserved.</p>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://npmcdn.com/flatpickr/dist/l10n/ko.js"></script>
+    <script>
+        const mesoSaleForm = document.getElementById('mesoSaleForm');
+        const messageArea = document.getElementById('message-area-meso');
+        const mesoSalesTableBody = document.getElementById('mesoSalesTable').getElementsByTagName('tbody')[0];
+        
+        const priceInput = document.getElementById('price_per_1m_meso');
+        const quantityInput = document.getElementById('quantity_sold_in_1m_units');
+        const totalDisplay = document.getElementById('total_sale_amount_krw_display');
+        const deleteAllMesoSalesBtn = document.getElementById('deleteAllMesoSalesBtn');
+
+        let saleDateFlatpickrInstance = null;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const dateInputMeso = document.getElementById('sale_date_flatpickr');
+            if (dateInputMeso) {
+                saleDateFlatpickrInstance = flatpickr(dateInputMeso, {
+                    dateFormat: "Y-m-d",
+                    defaultDate: "today",
+                    locale: "ko"
+                });
+                console.log("Flatpickr initialized for sale_date_flatpickr");
+            } else {
+                console.error("'sale_date_flatpickr' ID를 가진 요소를 찾을 수 없습니다.");
+            }
+
+            calculateTotalSaleValue(); 
+            loadMesoSales();
+
+            if (deleteAllMesoSalesBtn) {
+                deleteAllMesoSalesBtn.addEventListener('click', deleteAllMesoSales);
+                console.log("deleteAllMesoSales 이벤트 리스너 연결됨.");
+            } else {
+                console.error("deleteAllMesoSalesBtn 요소를 찾을 수 없습니다!");
+            }
+        });
+        
+        function calculateTotalSaleValue() {
+            const price = parseFloat(priceInput.value) || 0;
+            const quantity = parseFloat(quantityInput.value) || 0;
+            const total = price * quantity;
+            totalDisplay.textContent = `${Math.round(total).toLocaleString()} 원`;
+            return Math.round(total);
+        }
+
+        if(priceInput) priceInput.addEventListener('input', calculateTotalSaleValue);
+        if(quantityInput) quantityInput.addEventListener('input', calculateTotalSaleValue);
+
+        mesoSaleForm.addEventListener('submit', async function(event) {
+            event.preventDefault();
+            showMessage('메소 판매 기록 추가 중...', 'info');
+
+            let saleDateValue = "";
+            if (saleDateFlatpickrInstance) {
+                saleDateValue = saleDateFlatpickrInstance.input.value;
+            } else if (document.getElementById('sale_date_flatpickr')) {
+                saleDateValue = document.getElementById('sale_date_flatpickr').value;
+            } else {
+                saleDateValue = new Date().toISOString().split('T')[0];
+            }
+
+            const data = {
+                sale_date: saleDateValue,
+                price_per_1m_meso: parseInt(priceInput.value) || 0,
+                quantity_sold_in_1m_units: parseFloat(quantityInput.value) || 0,
+                total_sale_amount_krw: calculateTotalSaleValue()
+            };
+
+            console.log("Data being sent for Meso Sale:", JSON.stringify(data, null, 2));
+
+            try {
+                const response = await fetch('/api/meso-sales/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data),
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ detail: `HTTP error ${response.status}` }));
+                    throw new Error(errorData.detail || `메소 판매 기록 추가 중 오류 발생 (상태: ${response.status})`);
+                }
+                const result = await response.json();
+                showMessage('메소 판매 기록이 성공적으로 추가되었습니다.', 'success', 3000);
+                resetMesoSaleForm();
+                loadMesoSales();
+            } catch (error) {
+                showMessage(`오류: ${error.message}`, 'error', 5000);
+                console.error('Error adding meso sale:', error);
+            }
+        });
+
+        async function loadMesoSales() {
+            if (!mesoSalesTableBody) { console.error("Meso Sales: 'mesoSalesTable' tbody not found!"); return; }
+            const colspan = 6;
+            mesoSalesTableBody.innerHTML = `<tr><td colspan="${colspan}" style="text-align:center;">목록을 불러오는 중...</td></tr>`;
+            try {
+                const response = await fetch('/api/meso-sales/');
+                if (!response.ok) { throw new Error(`서버 응답 오류: ${response.status}`); }
+                const sales = await response.json();
+                mesoSalesTableBody.innerHTML = '';
+
+                if (sales && sales.length > 0) {
+                    sales.sort((a, b) => {
+                        const dateComparison = new Date(b.sale_date) - new Date(a.sale_date);
+                        if (dateComparison !== 0) return dateComparison;
+                        return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+                    });
+
+                    sales.forEach(sale => {
+                        const row = mesoSalesTableBody.insertRow();
+                        row.insertCell().textContent = sale.sale_date || 'N/A';
+                        row.insertCell().textContent = (sale.price_per_1m_meso || 0).toLocaleString();
+                        row.insertCell().textContent = (sale.quantity_sold_in_1m_units || 0).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 2 });
+                        row.insertCell().textContent = (sale.total_sale_amount_krw || 0).toLocaleString();
+                        row.insertCell().textContent = sale.created_at ? new Date(sale.created_at).toLocaleString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }) : 'N/A';
+                        
+                        const actionCell = row.insertCell();
+                        actionCell.style.textAlign = 'center';
+                        const deleteButton = document.createElement('button');
+                        deleteButton.textContent = '삭제';
+                        deleteButton.className = 'remove-item-btn';
+                        deleteButton.onclick = function() { deleteSingleMesoSale(sale.id); };
+                        actionCell.appendChild(deleteButton);
+                    });
+                } else {
+                    mesoSalesTableBody.innerHTML = `<tr><td colspan="${colspan}" style="text-align:center;">기록된 메소 판매 내역이 없습니다.</td></tr>`;
+                }
+            } catch (error) {
+                mesoSalesTableBody.innerHTML = `<tr><td colspan="${colspan}" style="text-align:center; color: red;">목록 로드 실패: ${error.message}</td></tr>`;
+                showMessage(`목록 로드 실패: ${error.message}`, 'error');
+                console.error('Error loading meso sales:', error);
+            }
+        }
+
+        async function deleteSingleMesoSale(saleId) {
+            if (!saleId) {
+                showMessage('삭제할 판매 기록 ID가 없습니다.', 'error', 3000);
+                return;
+            }
+            const recordType = "메소 판매";
+            if (!confirm(`ID ${saleId}번 ${recordType} 기록을 정말로 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`)) {
+                showMessage(`${recordType} 기록 삭제가 취소되었습니다.`, 'info', 3000);
+                return;
+            }
+
+            showMessage(`${recordType} 기록 삭제 중...`, 'info');
+            try {
+                const response = await fetch(`/api/meso-sales/${saleId}`, {
+                    method: 'DELETE'
+                });
+                if (!response.ok) {
+                    let errorDetail = `서버 응답 오류: ${response.status}`;
+                    try { const errorData = await response.json(); errorDetail = errorData.detail || errorDetail; } catch (e) { }
+                    throw new Error(errorDetail);
+                }
+                const result = await response.json();
+                showMessage(result.message || `${recordType} 기록이 성공적으로 삭제되었습니다.`, 'success', 3000);
+                loadMesoSales();
+            } catch (error) {
+                console.error(`단일 ${recordType} 기록 삭제 오류:`, error);
+                showMessage(`삭제 오류: ${error.message}`, 'error', 5000);
+            }
+        }
+
+        async function deleteAllMesoSales() {
+            const recordType = "메소 판매";
+            const confirmationMessage = `정말로 모든 ${recordType} 기록을 삭제하시겠습니까? 이 작업은 되돌릴 수 없으며, 저장된 모든 ${recordType} 데이터가 영구적으로 사라집니다. 계속하시려면 '확인'을, 취소하시려면 '취소'를 누르세요.`;
+
+            if (!confirm(confirmationMessage)) {
+                showMessage(`${recordType} 기록 전체 삭제가 취소되었습니다.`, 'info', 3000);
+                return;
+            }
+
+            showMessage(`모든 ${recordType} 기록 삭제 중...`, 'info');
+            try {
+                const response = await fetch('/api/meso-sales/all/', {
+                    method: 'DELETE'
+                });
+                if (!response.ok) {
+                    let errorDetail = `서버 응답 오류: ${response.status}`;
+                    try { const errorData = await response.json(); errorDetail = errorData.detail || errorDetail; } catch (e) { }
+                    throw new Error(errorDetail);
+                }
+                const result = await response.json();
+                showMessage(result.message || `총 ${result.deleted_count || 0}개의 ${recordType} 기록이 성공적으로 삭제되었습니다.`, 'success', 4000);
+                loadMesoSales();
+            } catch (error) {
+                console.error(`전체 ${recordType} 기록 삭제 오류:`, error);
+                showMessage(`전체 삭제 오류: ${error.message}`, 'error', 5000);
+            }
+        }
+        
+        function showMessage(message, type = 'info', duration = 0) {
+            if (!messageArea) return;
+            messageArea.textContent = message;
+            messageArea.className = 'message-area ' + type;
+            messageArea.style.display = message ? 'block' : 'none';
+
+            if (duration > 0) {
+                setTimeout(() => {
+                    messageArea.style.display = 'none';
+                    messageArea.textContent = '';
+                    messageArea.className = 'message-area';
+                }, duration);
+            }
+        }
+
+        function resetMesoSaleForm() {
+            if(!mesoSaleForm) return;
+            mesoSaleForm.reset();
+            if (saleDateFlatpickrInstance) {
+                saleDateFlatpickrInstance.setDate(new Date(), true); 
+            } else if (document.getElementById('sale_date_flatpickr')){
+                 document.getElementById('sale_date_flatpickr').value = new Date().toISOString().split('T')[0];
+            }
+            calculateTotalSaleValue();
+            showMessage('');
+        }
+    </script>
+</body>
+</html>

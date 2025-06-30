@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>정보 -  매랜 데이터 매니저</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}">
+    <style>
+        /* 이 페이지에만 적용될 스타일 또는 기존 style.css와 중복될 수 있는 공통 스타일 */
+        body { font-family: 'Arial', sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; color: #333; display: flex; flex-direction: column; min-height: 100vh; }
+        header { background: #333; color: #fff; padding: 1.8rem 0; text-align: center; } /* 헤더 높이 키운 것 반영 */
+        header h1 { margin: 0; font-size: 1.8rem; }
+        nav { background: #444; padding: 0.5rem 0; }
+        nav ul { padding: 0; list-style: none; text-align: center; margin: 0; }
+        nav ul li { display: inline-block; margin: 0 5px; }
+        nav ul li a { text-decoration: none; color: #fff; padding: 10px 15px; display: inline-block; border-radius: 4px; transition: background-color 0.3s ease; }
+        nav ul li a:hover, nav ul li a.active { background-color: #555; }
+        main.container { flex-grow: 1; width: 90%; max-width: 800px; margin: 20px auto; padding: 20px; background-color: #fff; box-shadow: 0 0 10px rgba(0,0,0,0.1); border-radius: 8px; }
+        footer { background: #333; color: #fff; text-align: center; padding: 1rem 0; margin-top: auto; width: 100%; font-size: 0.9em; }
+        nav ul li.dropdown { position: relative; display: inline-block; }
+        nav ul li.dropdown .dropbtn { cursor: default; }
+        nav ul li.dropdown .dropdown-content { display: none; position: absolute; background-color: #444; min-width: 160px; box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2); z-index: 101; left: 0; border-radius: 0 0 4px 4px; overflow: hidden; }
+        nav ul li.dropdown .dropdown-content a { color: white; padding: 10px 15px; text-decoration: none; display: block; text-align: left; white-space: nowrap; }
+        nav ul li.dropdown .dropdown-content a:hover { background-color: #555; }
+        nav ul li.dropdown:hover .dropdown-content { display: block; }
+
+        .info-section { margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid #eee; }
+        .info-section:last-child { border-bottom: none; margin-bottom: 0; }
+        .info-section h3 { color: #555; margin-top: 0; font-size: 1.3em; }
+        .info-section p { line-height: 1.7; margin-bottom: 10px; font-size: 0.95em; }
+        .info-section strong { color: #333; }
+        .info-section ul { list-style: disc; margin-left: 20px; padding-left: 0;}
+        .info-section ul li { margin-bottom: 5px; }
+
+        /* 사진첩 이스터에그 스타일 */
+        #photoAlbumContainer { display: none; margin-top: 20px; padding: 20px; background-color: #f0f2f5; border: 1px solid #dde; border-radius: 8px; text-align: center; }
+        #photoAlbumContainer h4 { margin-top: 0; color: #333; font-size: 1.2em; margin-bottom: 15px; }
+        #photoGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 15px; }
+        #photoGrid img { width: 100%; height: 120px; object-fit: cover; border-radius: 4px; cursor: pointer; transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out; border: 2px solid transparent; }
+        #photoGrid img:hover { transform: scale(1.08); box-shadow: 0 4px 8px rgba(0,0,0,0.2); border-color: #5cb85c; }
+        
+        /* 사진 모달 스타일 */
+        .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.85); align-items: center; justify-content: center; }
+        .modal-content { margin: auto; display: block; max-width: 85%; max-height: 85%; border-radius: 5px; }
+        .close-modal { position: absolute; top: 25px; right: 40px; color: #fff; font-size: 45px; font-weight: bold; transition: 0.3s; }
+        .close-modal:hover, .close-modal:focus { color: #bbb; text-decoration: none; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>메랜통계</h1>
+    </header>
+
+    <nav>
+        <ul>
+            <li><a href="{{ url_for('home') }}" class="{{ 'active' if request.url.path == url_for('home') else '' }}">홈</a></li>
+            <li><a href="{{ url_for('list_and_add_hunting_sessions') }}" class="{{ 'active' if 'hunting-sessions' in request.url.path else '' }}">사냥</a></li>
+            <li><a href="{{ url_for('list_and_add_jjul_sessions') }}" class="{{ 'active' if 'jjul-sessions' in request.url.path else '' }}">쩔</a></li>
+            <li class="dropdown">
+                <a href="javascript:void(0)" class="dropbtn {{ 'active' if request.url.path.startswith((url_for('statistics_experience_daily')|string).rsplit('/', 1)[0]) else '' }}">경험치 통계</a>
+                <div class="dropdown-content">
+                    <a href="{{ url_for('statistics_experience_daily') }}" class="{{ 'active' if request.url.path == url_for('statistics_experience_daily') else '' }}">일별 경험치</a>
+                    <a href="{{ url_for('statistics_experience_weekday') }}" class="{{ 'active' if request.url.path == url_for('statistics_experience_weekday') else '' }}">요일별 경험치</a>
+                    <a href="{{ url_for('statistics_experience_map') }}" class="{{ 'active' if request.url.path == url_for('statistics_experience_map') else '' }}">맵별 경험치</a>
+                </div>
+            </li>
+            <li class="dropdown">
+                <a href="javascript:void(0)" class="dropbtn {{ 'active' if request.url.path.startswith((url_for('statistics_daily')|string).rsplit('/', 1)[0]) and not request.url.path.startswith((url_for('statistics_experience_daily')|string).rsplit('/', 1)[0]) else '' }}">메소 통계</a>
+                <div class="dropdown-content">
+                    <a href="{{ url_for('statistics_daily') }}" class="{{ 'active' if request.url.path == url_for('statistics_daily') else '' }}">일별 메소</a>
+                    <a href="{{ url_for('statistics_weekday') }}" class="{{ 'active' if request.url.path == url_for('statistics_weekday') else '' }}">요일별 메소</a>
+                    <a href="{{ url_for('statistics_map') }}" class="{{ 'active' if request.url.path == url_for('statistics_map') else '' }}">맵별 메소</a>
+                </div>
+            </li>
+            <li><a href="{{ url_for('list_and_add_meso_sales') }}" class="{{ 'active' if 'meso-sales' in request.url.path else '' }}">쌀먹 장부</a></li>
+            <li><a href="{{ url_for('info_page') }}" class="{{ 'active' if request.url.path == url_for('info_page') else '' }}">정보</a></li>
+        </ul>
+    </nav>
+
+    <main class="container">
+        <h2>프로그램 정보</h2>
+
+        <div class="info-section">
+            <h3>제작자</h3>
+            <p><strong>이름:</strong> {{ creator.name }}</p>
+            <p><strong>Discord ID:</strong> {{ creator.discord_id }}</p>
+            <p><strong>YouTube 채널명:</strong> <span id="youtubeNameTrigger" title="궁금하면 클릭해보세요! ✨" style="cursor:pointer; color: #007bff; text-decoration: underline;">{{ creator.youtube_name }}</span></p>
+            <p><strong>메랜 닉네임:</strong> {{ creator.nickname }}</p> </div>
+
+        <div class="info-section">
+            <h3>후원 안내</h3>
+            <p>이 프로그램이 마음에 드셨거나 저에게 도움을 주고싶다면, 아마스빈 버블티 한잔 부탁드리겠습니다!</p>
+            <p><strong>계좌번호:</strong> {{ creator.account_number }} (예금주: {{ creator.name }})</p>
+            <p><em>후원금은 돌맹이의 스펙업과 사회적 취약계층 지원에 소중히 사용하도록 하겠습니다.</em></p>
+        </div>
+
+        <div class="info-section">
+            <h3>개발 중인 기능</h3>
+            <p>현재 다음과 같은 기능들을 준비중입니당</p>
+            <ul>
+                <li>데이터 저장 (엑셀 파일 내보내기)</li>
+                <li>사냥/쩔 종료 시 경험치 및 메소 자동 입력 기능</li>
+                <li>더욱 다양한 통계 분석 및 시각화 옵션</li>
+                <li>데이터 백업 및 복원 기능</li>
+            </ul>
+            <p style="margin-top:15px;"><em>"경손실나서 더는 안만들래여. 렙업하고옴"</em></p>
+        </div>
+        
+        <div class="info-section">
+            <h3>저작권 정보</h3>
+            <p>&copy; {{ current_year }} {{ creator.name }} (의문의돌맹이). All Rights Reserved.</p>
+            <p>이 프로그램은 개인적인 용도의 학습 및 포트폴리오를 위해 제작되었으며, 상업적 목적으로 사용할 수 없습니다.</p>
+        </div>
+
+        <div id="photoAlbumContainer">
+            <h4>제작자 사진</h4>
+            <div id="photoGrid">
+                </div>
+        </div>
+        
+        <div id="photoModal" class="modal" onclick="closePhotoModalOutside(event)">
+            <span class="close-modal" onclick="closePhotoModal()">&times;</span>
+            <img class="modal-content" id="modalImage">
+        </div>
+
+    </main>
+
+    <footer>
+        <p>&copy; {{ current_year }} {{ creator.name }}. All Rights Reserved.</p>
+    </footer>
+
+    <script>
+        // 현재 연도 가져오기 (푸터 및 저작권 정보에 사용 - main.py에서 context로 전달받으므로 이 부분은 필요 없을 수 있음)
+        // const currentYear = new Date().getFullYear();
+        // document.querySelectorAll('#copyrightNotice, #footerCopyright').forEach(el => {
+        //     if (el) el.innerHTML = el.innerHTML.replace('{{ current_year }}', currentYear);
+        // });
+
+        // --- 사진첩 이스터에그 로직 ---
+        const youtubeNameTriggerElement = document.getElementById('youtubeNameTrigger'); // ✨ 이스터에그 트리거 변경 ✨
+        const photoAlbumContainer = document.getElementById('photoAlbumContainer');
+        const photoGrid = document.getElementById('photoGrid');
+        const photoModal = document.getElementById('photoModal');
+        const modalImage = document.getElementById('modalImage');
+        
+        let easterEggClickCount = 0; // ✨ 변수명 변경 (다른 clickCount와 혼동 방지) ✨
+        const clicksToRevealEasterEgg = 3; // ✨ 이스터에그 발동 클릭 횟수 변경 ✨
+
+        // (1) 사진 목록: static/images/album/ 폴더에 사진을 넣어주시고, 아래 목록을 실제 파일 경로로 수정해주세요.
+        const photos = [            
+            "{{ url_for('static', path='images/album/1.jpg') }}",
+            "{{ url_for('static', path='images/album/18.jpg') }}",
+            "{{ url_for('static', path='images/album/3.jpg') }}",
+            "{{ url_for('static', path='images/album/4.webp') }}",
+            "{{ url_for('static', path='images/album/10.jpg') }}",
+            "{{ url_for('static', path='images/album/asd.jpg') }}",
+            "{{ url_for('static', path='images/album/15.webp') }}",
+            "{{ url_for('static', path='images/album/16.webp') }}",
+        
+            // 실제 사진이 없다면 임시 플레이스홀더 사용
+            // "https://via.placeholder.com/150/FF0000/FFFFFF?text=Haneul+1",
+        ];
+
+        if (youtubeNameTriggerElement) { // ✨ 트리거 요소 변경 ✨
+            youtubeNameTriggerElement.addEventListener('click', () => {
+                easterEggClickCount++;
+                if (easterEggClickCount === clicksToRevealEasterEgg -1) { // 1번 남았을 때
+                    alert('안녕하세요. 한번 더 누르시면 저를 보실 수 있어요.');
+                } else if (easterEggClickCount >= clicksToRevealEasterEgg) {
+                    if (photoAlbumContainer.style.display === 'none' || photoAlbumContainer.style.display === '') {
+                        photoAlbumContainer.style.display = 'block';
+                        photoGrid.innerHTML = ''; // Clear previous photos
+                        photos.forEach(photoSrc => {
+                            if (photoSrc.includes("placeholder")) { 
+                                const p = document.createElement('p');
+                                p.textContent = "사진 준비 중... (" + photoSrc.split('/').pop().split('.')[0] + ")";
+                                p.style.textAlign = 'center'; p.style.padding = '10px'; p.style.border = '1px dashed #ccc';
+                                photoGrid.appendChild(p);
+                                return;
+                            }
+                            const img = document.createElement('img');
+                            img.src = photoSrc;
+                            img.alt = "김하늘 사진첩";
+                            img.onclick = function() { openPhotoModal(photoSrc); };
+                            photoGrid.appendChild(img);
+                        });
+                        photoAlbumContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        alert('유튜브 커뮤니티에 일기를 자주 쓰고 있어요. 구독해주세요!');
+                    }
+                    easterEggClickCount = 0; // Reset click count
+                }
+            });
+        }
+
+        function openPhotoModal(src) {
+            if (photoModal && modalImage) {
+                modalImage.src = src;
+                photoModal.style.display = "flex"; 
+            }
+        }
+
+        function closePhotoModal() {
+            if (photoModal) {
+                photoModal.style.display = "none";
+                modalImage.src = ""; 
+            }
+        }
+        
+        function closePhotoModalOutside(event) {
+            if (event.target == photoModal) {
+                closePhotoModal();
+            }
+        }
+    </script>
+</body>
+</html>

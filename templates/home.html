@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>메랜통계 - 홈</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}">
+    <style>
+        /* 스타일은 이전 답변과 동일하게 유지 (필요시 style.css로 이동) */
+        body { font-family: 'Arial', sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; color: #333; display: flex; flex-direction: column; min-height: 100vh; }
+        header { background: #333; color: #fff; padding: 1.8rem 0; text-align: center; }
+        header h1 { margin: 0; font-size: 1.8rem; }
+        nav { background: #444; padding: 0.5rem 0; }
+        nav ul { padding: 0; list-style: none; text-align: center; margin: 0; }
+        nav ul li { display: inline-block; margin: 0 5px; }
+        nav ul li a { text-decoration: none; color: #fff; padding: 10px 15px; display: inline-block; border-radius: 4px; transition: background-color 0.3s ease; }
+        nav ul li a:hover, nav ul li a.active { background-color: #555; }
+        main.container { flex-grow: 1; width: 90%; max-width: 1200px; margin: 20px auto; padding: 20px; background-color: #fff; box-shadow: 0 0 10px rgba(0,0,0,0.1); border-radius: 8px; }
+        footer { background: #333; color: #fff; text-align: center; padding: 1rem 0; margin-top: auto; width: 100%; }
+        nav ul li.dropdown { position: relative; display: inline-block; }
+        nav ul li.dropdown .dropbtn { cursor: default; }
+        nav ul li.dropdown .dropdown-content { display: none; position: absolute; background-color: #444; min-width: 120px; box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2); z-index: 1; left: 0; border-radius: 0 0 4px 4px; overflow: hidden; }
+        nav ul li.dropdown .dropdown-content a { color: white; padding: 10px 15px; text-decoration: none; display: block; text-align: left; white-space: nowrap; }
+        nav ul li.dropdown .dropdown-content a:hover { background-color: #555; }
+        nav ul li.dropdown:hover .dropdown-content { display: block; }
+        .content { padding: 20px; text-align: center; }
+        .content h2 { color: #333; margin-bottom: 15px; }
+        .content p { font-size: 1.1rem; line-height: 1.6; margin-bottom: 10px; }
+
+        #homeCharacterImage {
+            display: block; /* 가운데 정렬을 위해 block 요소로 변경 */
+            margin: 0 auto 30px auto; /* 위 0, 좌우 auto, 아래 30px */
+            max-width: 400px; /* 이미지 최대 너비 (원하는 크기로 조절) */
+            width: 90%;     /* 화면 크기에 따라 반응형으로 조절 */
+            border-radius: 15px; /* 이미지 모서리 둥글게 (선택 사항) */
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2); /* 그림자 효과 (선택 사항) */
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>메랜통계</h1>
+    </header>
+
+    <nav>
+        <ul>
+            <li><a href="{{ url_for('home') }}" class="{{ 'active' if request.url.path == url_for('home') else '' }}">홈</a></li>
+            <li><a href="{{ url_for('list_and_add_hunting_sessions') }}" class="{{ 'active' if 'hunting-sessions' in request.url.path else '' }}">사냥</a></li>
+            <li><a href="{{ url_for('list_and_add_jjul_sessions') }}" class="{{ 'active' if 'jjul-sessions' in request.url.path else '' }}">쩔</a></li>
+            <li class="dropdown">
+                <a href="javascript:void(0)" class="dropbtn {{ 'active' if request.url.path.startswith((url_for('statistics_experience_daily')|string).rsplit('/', 1)[0]) else '' }}">경험치 통계</a>
+                <div class="dropdown-content">
+                    <a href="{{ url_for('statistics_experience_daily') }}" class="{{ 'active' if request.url.path == url_for('statistics_experience_daily') else '' }}">일별 경험치</a>
+                    <a href="{{ url_for('statistics_experience_weekday') }}" class="{{ 'active' if request.url.path == url_for('statistics_experience_weekday') else '' }}">요일별 경험치</a>
+                    <a href="{{ url_for('statistics_experience_map') }}" class="{{ 'active' if request.url.path == url_for('statistics_experience_map') else '' }}">맵별 경험치</a>
+                </div>
+            </li>
+            <li class="dropdown">
+                <a href="javascript:void(0)" class="dropbtn {{ 'active' if request.url.path.startswith((url_for('statistics_daily')|string).rsplit('/', 1)[0]) and not request.url.path.startswith((url_for('statistics_experience_daily')|string).rsplit('/', 1)[0]) else '' }}">메소 통계</a>
+                <div class="dropdown-content">
+                    <a href="{{ url_for('statistics_daily') }}" class="{{ 'active' if request.url.path == url_for('statistics_daily') else '' }}">일별 메소</a>
+                    <a href="{{ url_for('statistics_weekday') }}" class="{{ 'active' if request.url.path == url_for('statistics_weekday') else '' }}">요일별 메소</a>
+                    <a href="{{ url_for('statistics_map') }}" class="{{ 'active' if request.url.path == url_for('statistics_map') else '' }}">맵별 메소</a>
+                </div>
+            </li>
+            <li><a href="{{ url_for('list_and_add_meso_sales') }}" class="{{ 'active' if 'meso-sales' in request.url.path else '' }}">쌀먹 장부</a></li>
+            <li><a href="{{ url_for('info_page') }}" class="{{ 'active' if request.url.path == url_for('info_page') else '' }}">정보</a></li>
+        </ul>
+    </nav>
+
+    <main class="container">
+        <div class="content">
+            <img src="{{ url_for('static', path='images/asas.jpg') }}" alt="내 메이플 캐릭터" id="homeCharacterImage">
+
+            
+            <h2>환영합니다!</h2>
+            <p>매랜 데이터 매니저 입니다.</p>
+            <p>상단 메뉴를 통해 원하는 기능을 선택하여 기록을 시작하거나 통계를 확인하세요.</p>
+            <p><em>열심히 만들었습니다!!</em></p>
+        </div>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 김하늘 (의문의돌맹이). All rights reserved.</p>
+    </footer>
+
+    <script>
+        // 만약 main.py에서 current_year를 전달하지 않는다면, 아래 JavaScript로 연도 설정
+        // const footerCopyrightElement = document.querySelector("footer p");
+        // if (footerCopyrightElement) {
+        //     footerCopyrightElement.innerHTML = footerCopyrightElement.innerHTML.replace('{{ current_year }}', new Date().getFullYear());
+        // }
+    </script>
+</body>
+</html>

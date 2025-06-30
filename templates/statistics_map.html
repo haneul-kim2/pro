@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>맵별 요약 통계</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <style>
+        /* 기본 스타일 (다른 페이지와 유사) */
+        body { font-family: 'Arial', sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; color: #333; display: flex; flex-direction: column; min-height: 100vh; }
+        header { background: #333; color: #fff; padding: 1.8rem 0; text-align: center; }
+        header h1 { margin: 0; font-size: 1.8rem; }
+        nav { background: #444; padding: 0.5rem 0; }
+        nav ul { padding: 0; list-style: none; text-align: center; margin: 0; }
+        nav ul li { display: inline-block; margin: 0 5px; }
+        nav ul li a { text-decoration: none; color: #fff; padding: 10px 15px; display: inline-block; border-radius: 4px; transition: background-color 0.3s ease; }
+        nav ul li a:hover, nav ul li a.active { background-color: #555; }
+        main.container { flex-grow: 1; width: 90%; max-width: 1200px; margin: 20px auto; padding: 20px; background-color: #fff; box-shadow: 0 0 10px rgba(0,0,0,0.1); border-radius: 8px; }
+        footer { background: #333; color: #fff; text-align: center; padding: 1rem 0; margin-top: auto; width: 100%; }
+        nav ul li.dropdown { position: relative; display: inline-block; }
+        nav ul li.dropdown .dropbtn { cursor: default; }
+        nav ul li.dropdown .dropdown-content { display: none; position: absolute; background-color: #444; min-width: 120px; box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2); z-index: 1; left: 0; border-radius: 0 0 4px 4px; overflow: hidden; }
+        nav ul li.dropdown .dropdown-content a { color: white; padding: 10px 15px; text-decoration: none; display: block; text-align: left; white-space: nowrap; }
+        nav ul li.dropdown .dropdown-content a:hover { background-color: #555; }
+        nav ul li.dropdown:hover .dropdown-content { display: block; }
+        h2 { color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 0; margin-bottom: 20px; }
+        .filters { background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin-bottom: 30px; display: flex; gap: 15px; align-items: center; flex-wrap: wrap; border: 1px solid #eee;}
+        .filters label { font-weight: bold; margin-right: 5px; color: #555; }
+        .filters input[type="text"] { padding: 8px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem; } /* type="date" -> type="text" */
+        .filters button { background-color: #5bc0de; color: white; padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer; transition: background-color 0.3s ease; }
+        .filters button:hover { background-color: #31b0d5; }
+        .table-container { overflow-x: auto; margin-top: 20px; }
+        table { width: 100%; border-collapse: collapse; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        th, td { border: 1px solid #e0e0e0; padding: 10px 12px; text-align: left; vertical-align: middle; font-size: 0.9rem; }
+        th { background-color: #f8f8f8; font-weight: bold; color: #333; text-transform: uppercase; font-size: 0.85rem; }
+        tbody tr:nth-child(even) { background-color: #fdfdfd; }
+        tbody tr:hover { background-color: #f0f0f0; }
+        td { color: #555; }
+        td:not(:first-child) { text-align: right; }
+        .message-area { padding: 15px; margin-bottom: 20px; border-radius: 4px; border: 1px solid transparent; }
+        .message-area.error { background-color: #f2dede; color: #a94442; border-color: #ebccd1; }
+        .message-area.info { background-color: #d9edf7; color: #31708f; border-color: #bce8f1; }
+        .message-area:empty { display: none; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>메랜통계</h1>
+    </header>
+
+    <nav>
+        <ul>
+            <li><a href="{{ url_for('home') }}" class="{{ 'active' if request.url.path == url_for('home') else '' }}">홈</a></li>
+            <li><a href="{{ url_for('list_and_add_hunting_sessions') }}" class="{{ 'active' if 'hunting-sessions' in request.url.path else '' }}">사냥</a></li>
+            <li><a href="{{ url_for('list_and_add_jjul_sessions') }}" class="{{ 'active' if 'jjul-sessions' in request.url.path else '' }}">쩔</a></li>
+            
+            <li class="dropdown">
+                <a href="javascript:void(0)" class="dropbtn {{ 'active' if request.url.path.startswith((url_for('statistics_experience_daily')|string).rsplit('/', 1)[0]) else '' }}">경험치 통계</a>
+                <div class="dropdown-content">
+                    <a href="{{ url_for('statistics_experience_daily') }}" class="{{ 'active' if request.url.path == url_for('statistics_experience_daily') else '' }}">일별 경험치</a>
+                    <a href="{{ url_for('statistics_experience_weekday') }}" class="{{ 'active' if request.url.path == url_for('statistics_experience_weekday') else '' }}">요일별 경험치</a>
+                    <a href="{{ url_for('statistics_experience_map') }}" class="{{ 'active' if request.url.path == url_for('statistics_experience_map') else '' }}">맵별 경험치</a>
+                    </div>
+            </li>
+
+            <li class="dropdown">
+                <a href="javascript:void(0)" class="dropbtn {{ 'active' if request.url.path.startswith((url_for('statistics_daily')|string).rsplit('/', 1)[0]) and not request.url.path.startswith((url_for('statistics_experience_daily')|string).rsplit('/', 1)[0]) else '' }}">메소 통계</a>
+                <div class="dropdown-content">
+                    <a href="{{ url_for('statistics_daily') }}" class="{{ 'active' if request.url.path == url_for('statistics_daily') else '' }}">일별 메소</a>
+                    <a href="{{ url_for('statistics_weekday') }}" class="{{ 'active' if request.url.path == url_for('statistics_weekday') else '' }}">요일별 메소</a>
+                    <a href="{{ url_for('statistics_map') }}" class="{{ 'active' if request.url.path == url_for('statistics_map') else '' }}">맵별 메소</a>
+                </div>
+            </li>
+            <li><a href="{{ url_for('list_and_add_meso_sales') }}" class="{{ 'active' if 'meso-sales' in request.url.path else '' }}">쌀먹 장부</a></li>
+            <li><a href="{{ url_for('info_page') }}" class="active">정보</a></li>
+        </ul>
+    </nav>
+
+    <main class="container">
+        <h2>맵별 요약 통계</h2>
+        <div id="message-area-map" class="message-area"></div>
+        <div class="filters">
+            <label for="startDate_fp_map">시작 날짜:</label>
+            <input type="text" id="startDate_fp_map" placeholder="날짜 선택..."> <label for="endDate_fp_map">종료 날짜:</label>
+            <input type="text" id="endDate_fp_map" placeholder="날짜 선택...">   <button onclick="loadMapStats()">조회</button>
+        </div>
+        <h3>상세 데이터</h3>
+        <div class="table-container">
+            <table id="mapStatsTable">
+                <thead>
+                    <tr>
+                        <th>맵명</th> <th>사냥횟수</th> <th>쩔횟수</th> <th>총 사냥수익</th>
+                        <th>총 쩔수익</th> <th>총 고가템수익</th> <th>총 소모템획득수익</th>
+                        <th>평균 사냥수익</th> <th>평균 쩔수익</th>   </tr>
+                </thead>
+                <tbody>
+                    <tr> <td colspan="9" style="text-align:center;">데이터를 조회해주세요.</td> </tr>
+                </tbody>
+                <tfoot>
+                </tfoot>
+            </table>
+        </div>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 김하늘 (의문의돌맹이). All rights reserved.</p>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://npmcdn.com/flatpickr/dist/l10n/ko.js"></script> <script>
+        // ✨ Flatpickr 인스턴스 저장용 변수 ✨
+        let startDateFlatpickrMap = null;
+        let endDateFlatpickrMap = null;
+
+        // const startDateInput = document.getElementById('startDate'); // 이전 ID, 이제 사용 안 함
+        // const endDateInput = document.getElementById('endDate');   // 이전 ID, 이제 사용 안 함
+        const mapTableBody = document.getElementById('mapStatsTable').getElementsByTagName('tbody')[0];
+        const mapTableFoot = document.getElementById('mapStatsTable').getElementsByTagName('tfoot')[0];
+        const messageArea = document.getElementById('message-area-map');
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const today = new Date();
+            const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+
+            // ✨ Flatpickr 초기화 ✨
+            startDateFlatpickrMap = flatpickr("#startDate_fp_map", { // 새 ID 사용
+                dateFormat: "Y-m-d",
+                defaultDate: firstDayOfMonth,
+                locale: "ko"
+            });
+            endDateFlatpickrMap = flatpickr("#endDate_fp_map", { // 새 ID 사용
+                dateFormat: "Y-m-d",
+                defaultDate: today,
+                locale: "ko"
+            });
+            
+            console.log("Flatpickr initialized for map stats filters.");
+            loadMapStats();
+        });
+
+        async function loadMapStats() {
+            // ✨ Flatpickr 인스턴스에서 날짜 값 가져오기 ✨
+            const startDate = startDateFlatpickrMap.input.value; 
+            const endDate = endDateFlatpickrMap.input.value;
+
+            if (!startDate || !endDate) { showMessage('시작 날짜와 종료 날짜를 모두 선택해주세요.', 'error'); return; }
+            if (startDate > endDate) { showMessage('시작 날짜는 종료 날짜보다 이전이어야 합니다.', 'error'); return; }
+            
+            showMessage('데이터를 불러오는 중...', 'info');
+            mapTableBody.innerHTML = '<tr><td colspan="9" style="text-align:center;">데이터를 불러오는 중...</td></tr>';
+            mapTableFoot.innerHTML = '';
+            
+            // API 경로는 이전에 점검한 /api/statistics/summary/map 또는 /api/statistics/map 을 사용합니다.
+            // 여기서는 /summary/map 으로 가정합니다. (main.py 설정에 따라 달라짐)
+            // 만약 /api/statistics/map 이라면 아래 URL을 수정해야 합니다.
+            const apiUrl = `/api/statistics/summary/map?start_date=${startDate}&end_date=${endDate}`; 
+            console.log("Map Stats - Constructed API URL:", apiUrl);
+            
+            try {
+                const response = await fetch(apiUrl);
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ detail: '데이터 로드 실패 (서버 응답 파싱 불가)' }));
+                    throw new Error(errorData.detail || `서버 응답 오류: ${response.status}`);
+                }
+                const dataResponse = await response.json();
+                const mapData = dataResponse.summaries; // API 응답 구조에 맞춰 summaries 사용
+
+                renderMapTable(mapData);
+                showMessage(''); // 성공 시 메시지 클리어
+            } catch (error) {
+                showMessage(`오류: ${error.message}`, 'error');
+                mapTableBody.innerHTML = `<tr><td colspan="9" style="text-align:center; color: red;">데이터 로드 실패: ${error.message}</td></tr>`;
+                console.error('Error loading map statistics:', error);
+            }
+        }
+
+        function renderMapTable(data) {
+            mapTableBody.innerHTML = '';
+            mapTableFoot.innerHTML = '';
+            if (!data || data.length === 0) {
+                mapTableBody.innerHTML = '<tr><td colspan="9" style="text-align:center;">해당 기간의 데이터가 없습니다.</td></tr>';
+                return;
+            }
+            data.sort((a, b) => (a.map_name || "").localeCompare(b.map_name || ""));
+            
+            let totals = { map_name: '전체 합계', hunt_count: 0, jjul_count: 0, total_hunt_profit: 0, total_jjul_profit: 0, total_rare_item_profit: 0, total_consumable_gained_profit: 0 };
+
+            data.forEach(item => {
+                const row = mapTableBody.insertRow();
+                row.insertCell().textContent = item.map_name || 'N/A';
+                row.insertCell().textContent = item.hunt_count || 0; // 스키마 필드명: hunt_count
+                row.insertCell().textContent = item.jjul_count || 0; // 스키마 필드명: jjul_count
+                row.insertCell().textContent = (item.total_hunt_profit || 0).toLocaleString();
+                row.insertCell().textContent = (item.total_jjul_profit || 0).toLocaleString();
+                row.insertCell().textContent = (item.total_rare_item_profit || 0).toLocaleString();
+                row.insertCell().textContent = (item.total_consumable_gained_profit || 0).toLocaleString();
+                row.insertCell().textContent = (item.average_hunt_profit || 0).toLocaleString(); // 스키마 필드명: average_hunt_profit
+                row.insertCell().textContent = (item.average_jjul_profit || 0).toLocaleString(); // 스키마 필드명: average_jjul_profit
+
+                totals.hunt_count += item.hunt_count || 0;
+                totals.jjul_count += item.jjul_count || 0;
+                totals.total_hunt_profit += item.total_hunt_profit || 0;
+                totals.total_jjul_profit += item.total_jjul_profit || 0;
+                totals.total_rare_item_profit += item.total_rare_item_profit || 0;
+                totals.total_consumable_gained_profit += item.total_consumable_gained_profit || 0;
+            });
+
+            const footerRow = mapTableFoot.insertRow();
+            footerRow.style.fontWeight = 'bold';
+            footerRow.style.backgroundColor = '#f8f8f8';
+            const footerKeys = ['map_name', 'hunt_count', 'jjul_count', 'total_hunt_profit', 'total_jjul_profit', 'total_rare_item_profit', 'total_consumable_gained_profit'];
+            for (const key of footerKeys) {
+                 footerRow.insertCell().textContent = typeof totals[key] === 'string' ? totals[key] : (totals[key] || 0).toLocaleString();
+            }
+            footerRow.insertCell().textContent = ''; // 평균 사냥수익 합계는 의미 없음
+            footerRow.insertCell().textContent = ''; // 평균 쩔수익 합계는 의미 없음
+        }
+
+        function showMessage(message, type = 'info') {
+            if (!messageArea) return;
+            messageArea.textContent = message;
+            messageArea.className = 'message-area ' + type;
+            messageArea.style.display = message ? 'block' : 'none';
+        }
+    </script>
+</body>
+</html>
